@@ -24,6 +24,18 @@ class Commands
 				$this->RespondMotd($user);
 				break;
 				
+			case "join":
+				$this->RespondJoin($user, $index, $line, $recvArgs);
+				break;
+				
+			case "names":
+				$this->RespondNames($user, $recvArgs);
+				break;
+				
+			case "topic":
+				$this->RespondTopic($user, $line, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -41,10 +53,7 @@ class Commands
 		if (isset($args[1])) {
 			$newNick = trim(ltrim($args[1], ":"));
 			$changeNick = $user->Nick($newNick, $this->reservedNicks, $this->allUsers);
-			if ($changeNick === true) {
-				$this->allUsers[$index]->Nick($newNick, $this->reservedNicks, $this->allUsers);
-			}
-			else {
+			if (!$changeNick) {
 				$errorMsg = "";
 				if ($changeNick === 10) {
 					$errorMsg = "432 " . $newNick . " :Erroneous Nickname";
@@ -66,8 +75,6 @@ class Commands
 			$realName = ltrim($args[4], ":");
 			$user->Ident($ident);
 			$user->Realname($realName);
-			$this->allUsers[$index]->Ident($ident);
-			$this->allUsers[$index]->Realname($realName);
 			
 			$createdTS = file_get_contents("createdstamp-ircd");
 			$timeCreated = date("D M d Y", $createdTS) . " at " . date("H:i:s", $createdTS);
@@ -108,6 +115,157 @@ class Commands
 			$this->SocketHandler->sendData($user->Socket(), "372 " . $user->Nick() . " :- " . rtrim($line));
 		}
 		$this->SocketHandler->sendData($user->Socket(), "376 " . $user->Nick() . " :End of /MOTD command.");
+	}
+	
+	public function RespondJoin($user, $index, $line, $args) {
+		if (isset($args[1])) {
+			$chansJoin = explode(",", $args[1]);
+			foreach ($chansJoin as $channel) {
+				$channel = trim($channel);
+				if (substr($channel, 0, 1) == "#") {
+				
+					if (!\GearsIRCd\Utilities::ValidateChannel($channel)) {
+						$this->SocketHandler->sendData($user->Socket(), "403 " . $channel . " :No such channel");
+						break;
+					}
+				
+					$channelExists = false;
+					$channelIndex = 0;
+					
+					foreach ($this->allChannels as $cIndex => $chan) {
+						if (strtolower($chan) == strtolower($channel)) {
+							$channelExists = true;
+							$channelIndex = $cIndex;
+							break;
+						}
+					}
+					
+					if ($channelExists === true) {
+						if (!$this->allChannels[$cIndex]->IsBanned($user)) {
+							$this->allChannels[$cIndex]->AddUser($user);
+							$this->SocketHandler->sendCommand($user, "JOIN " . $this->allChannels[$cIndex]->Name());
+							// services stuff here for later (chanserv)
+						}
+						else {
+							// u banned bruh (implement l8r)
+							break;
+						}
+					}
+					else {
+						$newChannel = new \GearsIRCd\Channel($channel);
+						$newChannel->AddUser($user);
+						$this->allChannels[] = $newChannel;
+						$this->SocketHandler->sendCommand($user, "JOIN " . $channel);
+					}
+					$this->RespondNames($user, $args, $channel);
+				}
+			}
+		}
+	}
+	
+	public function RespondNames($user, $args, $chan = "") {
+		$channel = "";
+		if (!empty($chan)) {
+			$channel = $chan;
+		}
+		else {
+			if (count($args) >= 1) {
+				$channel = trim($args[1]);
+			}
+			else {
+				return false;
+			}
+		}
+		if (substr($channel, 0, 1) == "#") {
+			foreach ($this->allChannels as $chan) {
+				if (strtolower($channel) == strtolower($chan->Name())) {
+					$usersList = "";
+					foreach ($chan->users as $user) {
+						if ($chan->OwnerMode($user)) {
+							$usersList .= "~" . $user->Nick() . " ";
+						}
+						elseif ($chan->AdminMode($user)) {
+							$usersList .= "&" . $user->Nick() . " ";
+						}
+						elseif ($chan->OperatorMode($user)) {
+							$usersList .= "@" . $user->Nick() . " ";
+						}
+						elseif ($chan->HalfopMode($user)) {
+							$usersList .= "%" . $user->Nick() . " ";
+						}
+						elseif ($chan->VoiceMode($user)) {
+							$usersList .= "+" . $user->Nick() . " ";
+						}
+						else {
+							$usersList .= $user->Nick() . " ";
+						}
+					}
+					$usersList = trim($usersList);
+					
+					$this->SocketHandler->sendData($user->Socket(), "353 " . $user->Nick() . " = " . $chan->Name() . " :" . $usersList);
+					$this->SocketHandler->sendData($user->Socket(), "366 " . $user->Nick() . " " . $chan->Name() . " :End of /NAMES list.");
+					
+					$this->RespondTopic($user, "", array(), $chan);
+					
+					break;
+				}
+			}
+		}
+	}
+	
+	public function RespondTopic($user, $line, $args, $chan = null) {
+		$channel = "";
+		
+		if ($chan != null) {
+			$chanTopic = $chan->Topic();
+			if ($chanTopic[0] != null) {
+				$this->SocketHandler->sendData($user->Socket(), "332 " . $user->Nick() . " " . $chan->Name() . " :" . $chanTopic[0]);
+				$this->SocketHandler->sendData($user->Socket(), "333 " . $user->Nick() . " " . $chan->Name() . " " . $chanTopic[2] . " " . $chanTopic[1]);
+			}
+			else {
+				$this->SocketHandler->sendData($user->Socket(), "331 " . $user->Nick() . " " . $chan->Name() . " :No topic is set.");
+			}
+			return true;
+		}
+		else {
+			if (count($args) > 1) {
+				$channel = trim($args[1]);
+			}
+			else {
+				return false;
+			}
+		}
+		
+		if (substr($channel, 0, 1) == "#") {
+			foreach ($this->allChannels as $chan) {
+				if (strtolower($channel) == strtolower($chan->Name())) {
+					if (strpos($line, ":") !== false) {
+						if ($chan->IsHalfOpOrAbove($user)) {
+							$newTopic = substr($line, strpos($line, ":") + 1);
+							$chanTopic = $chan->Topic($newTopic, $user);
+							
+							foreach ($chan->users as $cUser) {
+								$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " TOPIC " . $chan->Name() . " :" . $chanTopic[0]);
+							}
+							return true;
+						}
+						else {
+							$this->SocketHandler->sendData($user->Socket(), "482 " . $user->Nick() . " " . $chan->Name() . " :You're not channel operator");
+							return false;
+						}
+					}
+				
+					$chanTopic = $chan->Topic();
+					if ($chanTopic[0] != null) {
+						$this->SocketHandler->sendData($user->Socket(), "332 " . $user->Nick() . " " . $chan->Name() . " :" . $chanTopic[0]);
+						$this->SocketHandler->sendData($user->Socket(), "333 " . $user->Nick() . " " . $chan->Name() . " " . $chanTopic[2] . " " . $chanTopic[1]);
+					}
+					else {
+						$this->SocketHandler->sendData($user->Socket(), "331 " . $user->Nick() . " " . $chan->Name() . " :No topic is set.");
+					}
+				}
+			}
+		}
 	}
 }
 ?>

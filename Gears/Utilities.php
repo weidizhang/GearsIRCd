@@ -7,6 +7,14 @@ class Utilities
 		return preg_match("/\A[a-z_\-\[\]\\^{}|`][a-z0-9_\-\[\]\\^{}|`]{1,17}\z/i", $nick);
 	}
 	
+	public static function ValidateChannel($chan) {
+		return preg_match('/^#[a-zA-Z0-9`~!@#$%^&*\(\)\'";|}{\]\[.<>?]{0,20}$/', $chan);
+	}
+	
+	public static function UserToFullHostmask($user) {
+		return $user->Nick() . "!" . $user->Ident() . "@" . $user->Hostmask();
+	}
+	
 	public static function MatchHostmask($orig, $toMatch) {
 		$orig = strtolower($orig);
 		$toMatch = strtolower($toMatch);
@@ -19,7 +27,7 @@ class Utilities
 		$hostArgs = explode(".", $hostname);
 		
 		if ($ip == "127.0.0.1") {
-			return $prefix . "-" . substr(strtoupper(md5(microtime(true))), 5, 8) . "-localhost";
+			return $prefix . "-" . substr(strtoupper(md5("localhost")), 5, 8);
 		}
 		
 		if ($hostname != $ip) {

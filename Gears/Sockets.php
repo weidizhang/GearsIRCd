@@ -22,7 +22,7 @@ class Sockets
 	}
 	
 	public function sendCommand($userObj, $cmd) {
-		$buildStr = ":" . $userObj->Nick() . "!" . $userObj->Ident() . "@" . $userObj->Hostmask() . " " . $cmd;
+		$buildStr = ":" . \GearsIRCd\Utilities::UserToFullHostmask($userObj) . " " . $cmd;
 		$this->sendRaw($userObj->Socket(), $buildStr);
 	}
 	
