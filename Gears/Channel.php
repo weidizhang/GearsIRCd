@@ -29,9 +29,22 @@ class Channel
 		if (count($this->users) == 0) {
 			$this->OperatorMode($user, true);
 		}
-		if (!in_array($user, $this->users)) {
-			$this->users[] = $user;
+		
+		if ($this->IsUserInChannel($user)) {
+			return false;
 		}
+		$this->users[] = $user;
+		return true;
+	}
+	
+	public function RemoveUser($user) {
+		$this->users = \GearsIRCd\Utilities::RemoveFromArray($this->users, $user);
+		$this->q = \GearsIRCd\Utilities::RemoveFromArray($this->q, $user);
+		$this->a = \GearsIRCd\Utilities::RemoveFromArray($this->a, $user);
+		$this->o = \GearsIRCd\Utilities::RemoveFromArray($this->o, $user);
+		$this->h = \GearsIRCd\Utilities::RemoveFromArray($this->h, $user);
+		$this->v = \GearsIRCd\Utilities::RemoveFromArray($this->v, $user);
+		return true;
 	}
 	
 	public function Topic($new = "", $user = null) {
@@ -112,6 +125,10 @@ class Channel
 	
 	public function IsOpOrAbove($user) {
 		return ($this->OperatorMode($user) || $this->AdminMode($user) || $this->OwnerMode($user));
+	}
+	
+	public function IsUserInChannel($user) {
+		return in_array($user, $this->users);
 	}
 	
 	public function Name() {

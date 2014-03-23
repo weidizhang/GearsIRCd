@@ -13,11 +13,11 @@ class Commands
 				break;
 				
 			case "nick":
-				$this->RespondNick($user, $index, $line, $recvArgs);
+				$this->RespondNick($user, $line, $recvArgs);
 				break;
 				
 			case "user":
-				$this->RespondUser($user, $index, $line, $recvArgs);
+				$this->RespondUser($user, $line, $recvArgs);
 				break;
 				
 			case "motd":
@@ -25,7 +25,11 @@ class Commands
 				break;
 				
 			case "join":
-				$this->RespondJoin($user, $index, $line, $recvArgs);
+				$this->RespondJoin($user, $line, $recvArgs);
+				break;
+				
+			case "part":
+				$this->RespondPart($user, $line, $recvArgs);
 				break;
 				
 			case "names":
@@ -49,7 +53,7 @@ class Commands
 		$this->SocketHandler->sendRaw($user->Socket(), "PONG " . $this->addr . " " . $pingResp);
 	}
 	
-	public function RespondNick($user, $index, $line, $args) {
+	public function RespondNick($user, $line, $args) {
 		if (isset($args[1])) {
 			$newNick = trim(ltrim($args[1], ":"));
 			$changeNick = $user->Nick($newNick, $this->reservedNicks, $this->allUsers);
@@ -69,7 +73,7 @@ class Commands
 		}
 	}
 	
-	public function RespondUser($user, $index, $line, $args) {
+	public function RespondUser($user, $line, $args) {
 		if ((count($args) >= 5) && ($user->Nick() != null) && ($user->Ident() == null)) {
 			$ident = $args[1];
 			$realName = ltrim($args[4], ":");
@@ -117,7 +121,7 @@ class Commands
 		$this->SocketHandler->sendData($user->Socket(), "376 " . $user->Nick() . " :End of /MOTD command.");
 	}
 	
-	public function RespondJoin($user, $index, $line, $args) {
+	public function RespondJoin($user, $line, $args) {
 		if (isset($args[1])) {
 			$chansJoin = explode(",", $args[1]);
 			foreach ($chansJoin as $channel) {
@@ -125,7 +129,7 @@ class Commands
 				if (substr($channel, 0, 1) == "#") {
 				
 					if (!\GearsIRCd\Utilities::ValidateChannel($channel)) {
-						$this->SocketHandler->sendData($user->Socket(), "403 " . $channel . " :No such channel");
+						$this->SocketHandler->sendData($user->Socket(), "403 " . $user->Nick() . " " . $channel . " :No such channel");
 						break;
 					}
 				
@@ -133,7 +137,7 @@ class Commands
 					$channelIndex = 0;
 					
 					foreach ($this->allChannels as $cIndex => $chan) {
-						if (strtolower($chan) == strtolower($channel)) {
+						if (strtolower($chan->Name()) == strtolower($channel)) {
 							$channelExists = true;
 							$channelIndex = $cIndex;
 							break;
@@ -142,9 +146,13 @@ class Commands
 					
 					if ($channelExists === true) {
 						if (!$this->allChannels[$cIndex]->IsBanned($user)) {
-							$this->allChannels[$cIndex]->AddUser($user);
-							$this->SocketHandler->sendCommand($user, "JOIN " . $this->allChannels[$cIndex]->Name());
-							// services stuff here for later (chanserv)
+							$addUser = $this->allChannels[$cIndex]->AddUser($user);
+							if ($addUser === true) {
+								foreach ($this->allChannels[$cIndex]->users as $cUser) {
+									$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " JOIN " . $this->allChannels[$cIndex]->Name());
+								}
+								// services stuff here for later (chanserv)
+							}
 						}
 						else {
 							// u banned bruh (implement l8r)
@@ -158,6 +166,41 @@ class Commands
 						$this->SocketHandler->sendCommand($user, "JOIN " . $channel);
 					}
 					$this->RespondNames($user, $args, $channel);
+				}
+			}
+		}
+	}
+	
+	public function RespondPart($user, $line, $args) {
+		if (isset($args[1])) {
+			$chansPart = explode(",", $args[1]);
+			foreach ($chansPart as $chan) {
+				if (substr($chan, 0, 1) == "#") {
+					$chanExists = false;
+					$chanIndex = 0;
+					foreach ($this->allChannels as $cIndex => $chanx) {
+						if (strtolower($chanx->Name()) == strtolower($chan)) {
+							$chanExists = true;
+							$chanIndex = $cIndex;
+							break;
+						}
+					}
+					
+					if (!$chanExists) {
+						$this->SocketHandler->sendData($user->Socket(), "403 " . $user->Nick() . " " . $chan . " :No such channel");
+					}
+					else {
+						$chanObj = $this->allChannels[$chanIndex];
+						if ($chanObj->IsUserInChannel($user)) {
+							foreach ($chanObj->users as $cUser) {
+								$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " PART " . $chanObj->Name());
+							}
+							$chanObj->RemoveUser($user);
+						}
+						else {
+							$this->SocketHandler->sendData($user->Socket(), "422 " . $user-Nick() . " " . $chan . " :You're not on that channel");
+						}
+					}
 				}
 			}
 		}
@@ -180,24 +223,24 @@ class Commands
 			foreach ($this->allChannels as $chan) {
 				if (strtolower($channel) == strtolower($chan->Name())) {
 					$usersList = "";
-					foreach ($chan->users as $user) {
-						if ($chan->OwnerMode($user)) {
-							$usersList .= "~" . $user->Nick() . " ";
+					foreach ($chan->users as $cUser) {
+						if ($chan->OwnerMode($cUser)) {
+							$usersList .= "~" . $cUser->Nick() . " ";
 						}
-						elseif ($chan->AdminMode($user)) {
-							$usersList .= "&" . $user->Nick() . " ";
+						elseif ($chan->AdminMode($cUser)) {
+							$usersList .= "&" . $cUser->Nick() . " ";
 						}
-						elseif ($chan->OperatorMode($user)) {
-							$usersList .= "@" . $user->Nick() . " ";
+						elseif ($chan->OperatorMode($cUser)) {
+							$usersList .= "@" . $cUser->Nick() . " ";
 						}
-						elseif ($chan->HalfopMode($user)) {
-							$usersList .= "%" . $user->Nick() . " ";
+						elseif ($chan->HalfopMode($cUser)) {
+							$usersList .= "%" . $cUser->Nick() . " ";
 						}
-						elseif ($chan->VoiceMode($user)) {
-							$usersList .= "+" . $user->Nick() . " ";
+						elseif ($chan->VoiceMode($cUser)) {
+							$usersList .= "+" . $cUser->Nick() . " ";
 						}
 						else {
-							$usersList .= $user->Nick() . " ";
+							$usersList .= $cUser->Nick() . " ";
 						}
 					}
 					$usersList = trim($usersList);

@@ -52,5 +52,13 @@ class Utilities
 			return $newMask;
 		}
 	}
+	
+	public static function RemoveFromArray($array, $obj) {
+		$gKey = array_search($obj, $array);
+		if ($gKey === false) {
+			return $array;
+		}
+		return array_merge(array_slice($array, 0, $gKey), array_slice($array, $gKey + 1));
+	}
 }
 ?>
