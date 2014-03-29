@@ -17,6 +17,7 @@ class Channel
 	
 	private $inviteOnly = false;
 	private $banned = array();
+	private $plusModeration = false;
 	
 	private $channelName;
 	private $channelOwner = null; // For ChanServ	
@@ -115,12 +116,29 @@ class Channel
 		return in_array($user, $this->v);
 	}
 	
+	public function ModerationMode($on = null) {
+		if (is_bool($on) && $on != null) {
+			$this->plusModeration = $on;
+			return true;
+		}
+		return $this->plusModeration;
+	}
+	
 	public function IsBanned($user) {
-		return false; // Todo: implement dis sheit
+		foreach ($this->banned as $ban) {
+			if (\GearsIRCd\Utilities::MatchHostmask(\GearsIRCd\Utilities::UserToFullHostmask($user), $ban)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public function IsVoiceOrAbove($user) {
+		return ($this->VoiceMode($user) || $this->IsHalfOpOrAbove($user));
 	}
 	
 	public function IsHalfOpOrAbove($user) {
-		return ($this->HalfopMode($user) || $this->OperatorMode($user) || $this->AdminMode($user) || $this->OwnerMode($user));
+		return ($this->HalfopMode($user) || $this->IsOpOrAbove($user));
 	}
 	
 	public function IsOpOrAbove($user) {

@@ -40,6 +40,9 @@ class Commands
 				$this->RespondTopic($user, $line, $recvArgs);
 				break;
 				
+			case "privmsg":
+				$this->RespondPrivmsg($user, $line, $recvArgs);
+				
 			default:
 				break;
 		}
@@ -155,7 +158,7 @@ class Commands
 							}
 						}
 						else {
-							// u banned bruh (implement l8r)
+							$this->SocketHandler->sendData($user->Socket(), "474 " . $user->Nick() . " " . $this->allChannels[$cIndex]->Name(). " :Cannot join channel (+b)");
 							break;
 						}
 					}
@@ -306,6 +309,53 @@ class Commands
 					else {
 						$this->SocketHandler->sendData($user->Socket(), "331 " . $user->Nick() . " " . $chan->Name() . " :No topic is set.");
 					}
+				}
+			}
+		}
+	}
+	
+	public function RespondPrivmsg($user, $line, $args) {
+		if (isset($args[2])) {
+			$chanTo = $args[1];
+			$msgPosition = strpos($line, ":");
+			if ($msgPosition !== false) {
+				$msg = substr($line, $msgPosition + 1);
+				if (substr($chanTo, 0, 1) == "#") {
+					$chanExists = false;
+					foreach ($this->allChannels as $chan) {
+						if (strtolower($chanTo) == strtolower($chan->Name())) {
+							$chanExists = true;
+							$oldChanTo = $chanTo;
+							$chanTo = $chan->Name();
+							
+							if ($chan->IsUserInChannel($user)) {
+								if ($chan->IsBanned($user)) {
+									$this->SocketHandler->sendData($user->Socket(), "404 " . $user->Nick() . " " . $chanTo . " :You are banned (" . $oldChanTo . ")");
+								}
+								elseif (($chan->ModerationMode() === true) && (!$chan->IsVoiceOrAbove($user))) {
+									$this->SocketHandler->sendData($user->Socket(), "404 " . $user->Nick() . " " . $chanTo . " :You need voice (+v) (" . $oldChanTo . ")");
+								}
+								else {									
+									foreach ($chan->users as $cUser) {
+										if ($cUser != $user) {
+											$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " PRIVMSG " . $chanTo . " :" . $msg);
+										}
+									}
+								}
+							}
+							else {
+								$this->SocketHandler->sendData($user->Socket(), "404 " . $user->Nick() . " " . $chanTo . " :No external channel messages (" . $oldChanTo . ")");
+							}
+							break;
+						}
+					}
+					
+					if ($chanExists === false) {
+						$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $chanTo . " :No such nick/channel");
+					}
+				}
+				else {
+					// Queries
 				}
 			}
 		}
