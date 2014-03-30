@@ -42,6 +42,11 @@ class Commands
 				
 			case "privmsg":
 				$this->RespondPrivmsg($user, $line, $recvArgs);
+				break;
+				
+			case "oper":
+				$this->RespondOper($user, $recvArgs);
+				break;
 				
 			default:
 				break;
@@ -382,6 +387,31 @@ class Commands
 							$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $chanTo . " :No such nick/channel");
 						}
 					}
+				}
+			}
+		}
+	}
+	
+	public function RespondOper($user, $args) {
+		if (isset($args[2])) {
+			$username = $args[1];
+			$password = $args[2];
+			
+			$isOper = false;
+			foreach ($this->configOpers as $oper) {
+				if (($oper["Username"] == $username) && (hash($oper["PasswordHashMethod"], $password) === $oper["Password"])) {
+					$isOper = true;
+					$user->Operator(true);
+					$this->SocketHandler->sendData($user->Socket(), "381 " . $user->Nick() . " :You are now an IRC Operator");
+					break;
+				}
+			}
+			
+			if ($isOper === false) {
+				$this->SocketHandler->sendData($user->Socket(), "491 " . $user->Nick() . " :No O-lines for your host");
+				$user->failedOperAttempts++;
+				if ($user->failedOperAttempts >= 6) {
+					// issue KILL for user here
 				}
 			}
 		}

@@ -18,6 +18,7 @@ class Server extends Commands
 	
 	protected $allUsers = array();
 	protected $allChannels = array();
+	protected $configOpers = array();
 	protected $reservedNicks;
 	protected $SocketHandler;			
 	
@@ -49,6 +50,10 @@ class Server extends Commands
 		}
 		
 		\GearsIRCd\Debug::printLn("Server started");
+	}
+	
+	public function addOperator($operSettings) {
+		$this->configOpers[] = $operSettings;
 	}
 	
 	public function listenOnce() {

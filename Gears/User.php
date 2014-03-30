@@ -9,6 +9,8 @@ class User
 	private $socket;
 	private $isOperator = false;
 	
+	public $failedOperAttempts = 0;
+	
 	private $ipAddr;
 	private $hostName;
 	private $hostMask;
