@@ -355,7 +355,33 @@ class Commands
 					}
 				}
 				else {
-					// Queries
+					if (strtolower($chanTo) == "nickserv") {
+						// to do: implement when we code services
+					}
+					elseif (strtolower($chanTo) == "chanserv") {
+						// to do: implement when we code services
+					}
+					elseif (strtolower($chanTo) == "operserv") {
+						// to do: implement when we code services
+					}
+					elseif (strtolower($chanTo) == "botserv") {
+						// to do: implement when we code services
+					}
+					else {
+						$userExists = false;
+						
+						foreach ($this->allUsers as $serverUser) {
+							if (strtolower($serverUser->Nick()) == strtolower($chanTo)) {
+								$userExists = true;
+								$this->SocketHandler->sendRaw($serverUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " PRIVMSG " . $serverUser->Nick() . " :" . $msg);
+								break;
+							}
+						}
+						
+						if ($userExists === false) {
+							$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $chanTo . " :No such nick/channel");
+						}
+					}
 				}
 			}
 		}
