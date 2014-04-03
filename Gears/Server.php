@@ -5,6 +5,7 @@ class Server extends Commands
 {
 	protected $name;
 	protected $addr;
+	protected $ip = "0.0.0.0";
 	protected $port = 6667;
 	protected $motd;
 	protected $maxUsers = 75;
@@ -25,6 +26,7 @@ class Server extends Commands
 	public function __construct($servSettings) {
 		$this->name = $servSettings["Name"];
 		$this->addr = $servSettings["Address"];
+		$this->ip = $servSettings["IP"];
 		$this->port = $servSettings["Port"];
 		$this->motd = $servSettings["MOTD"];
 		$this->maxUsers = $servSettings["MaxUsers"];
@@ -38,7 +40,7 @@ class Server extends Commands
 	
 	public function startServer() {
 		$this->servSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-		socket_bind($this->servSocket, "0.0.0.0", $this->port);
+		socket_bind($this->servSocket, $this->ip , $this->port);
 		socket_listen($this->servSocket, $this->maxUsers);
 		socket_set_nonblock($this->servSocket);
 		
