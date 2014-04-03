@@ -8,6 +8,7 @@ foreach (glob("./Gears/*.php") as $gearsClass) {
 $ircServer = new \GearsIRCd\Server(array(
 	"Name" => "BasedIRC",
 	"Address" => "irc.basedgod.gov",
+	"IP" => "0.0.0.0",
 	"Port" => 6667,
 	"MOTD" => "Welcome to the GearsIRCd test server. \nEnjoy your stay!",
 	"MaxUsers" => 25,
