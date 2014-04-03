@@ -2,6 +2,7 @@
 $settings = array();
 $settings["Name"] = "BasedIRC";
 $settings["Address"] = "irc.basedgod.gov";
+$settings["IP"] = "0.0.0.0";
 $settings["Port"] = 6667;
 $settings["MOTD"] = "Welcome to the GearsIRCd test server. \nEnjoy your stay!";
 $settings["MaxUsers"] = 25;

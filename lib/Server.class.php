@@ -4,6 +4,7 @@ namespace GearsIRCd\lib;
 class Server {
 	public $name;
 	public $addr;
+	public $ip = "0.0.0.0";
 	public $port = 6667;
 	public $motd;
 	public $maxUsers = 75;
@@ -24,6 +25,7 @@ class Server {
 	public function __construct(Array $servSettings, Array $opers) {
 		$this->name = $servSettings["Name"];
 		$this->addr = $servSettings["Address"];
+		$this->ip = $servSettings["IP"];
 		$this->port = $servSettings["Port"];
 		$this->motd = $servSettings["MOTD"];
 		$this->maxUsers = $servSettings["MaxUsers"];
@@ -38,7 +40,7 @@ class Server {
 	
 	public function startServer() {
 		$this->servSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-		socket_bind($this->servSocket, "0.0.0.0", $this->port);
+		socket_bind($this->servSocket, $this->ip, $this->port);
 		socket_listen($this->servSocket, $this->maxUsers);
 		socket_set_nonblock($this->servSocket);
 		
