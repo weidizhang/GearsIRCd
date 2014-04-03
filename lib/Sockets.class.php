@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Sockets
-{
+class Sockets {
 	private $serverName;
 	
 	public function __construct($addr) {
@@ -13,7 +12,7 @@ class Sockets
 		$raw .= "\n";
 		socket_write($socket, $raw);
 		
-		\GearsIRCd\Debug::printLn("Sent - " . trim($raw));
+		Debug::printLn("Sent - " . trim($raw));
 	}
 	
 	public function sendData($socket, $raw) {
@@ -22,7 +21,7 @@ class Sockets
 	}
 	
 	public function sendCommand($userObj, $cmd) {
-		$buildStr = ":" . \GearsIRCd\Utilities::UserToFullHostmask($userObj) . " " . $cmd;
+		$buildStr = ":" . Utilities::UserToFullHostmask($userObj) . " " . $cmd;
 		$this->sendRaw($userObj->Socket(), $buildStr);
 	}
 	
@@ -35,7 +34,7 @@ class Sockets
 		$sockRead = str_replace("\r", "\n", $sockRead);
 		$sockRead = preg_replace("/\n{2,}/", "\n", $sockRead);
 		
-		\GearsIRCd\Debug::printLn("Received - " . trim($sockRead));
+		Debug::printLn("Received - " . trim($sockRead));
 		return $sockRead;
 	}
 	

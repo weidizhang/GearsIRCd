@@ -1,30 +1,31 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Server extends Commands
-{
-	protected $name;
-	protected $addr;
-	protected $port = 6667;
-	protected $motd;
-	protected $maxUsers = 75;
-	protected $packetLen = 512;
-	protected $prefix = "irc";
-	protected $maxChans = 25;	
-	protected $ircdVer = "GearsIRCd Alpha";	
+class Server {
+	public $name;
+	public $addr;
+	public $ip = "0.0.0.0";
+	public $port = 6667;
+	public $motd;
+	public $maxUsers = 75;
+	public $packetLen = 512;
+	public $prefix = "irc";
+	public $maxChans = 25;	
+	public $ircdVer = "GearsIRCd Alpha";	
 	
 	private $servSocket;
 	private $uniqCount = 0;
 	
-	protected $allUsers = array();
-	protected $allChannels = array();
-	protected $configOpers = array();
-	protected $reservedNicks;
-	protected $SocketHandler;			
+	public $allUsers = array();
+	public $allChannels = array();
+	public $configOpers = array();
+	public $reservedNicks;
+	public $SocketHandler;			
 	
-	public function __construct($servSettings) {
+	public function __construct(Array $servSettings, Array $opers) {
 		$this->name = $servSettings["Name"];
 		$this->addr = $servSettings["Address"];
+		$this->ip = $servSettings["IP"];
 		$this->port = $servSettings["Port"];
 		$this->motd = $servSettings["MOTD"];
 		$this->maxUsers = $servSettings["MaxUsers"];
@@ -32,13 +33,14 @@ class Server extends Commands
 		$this->prefix = $servSettings["HostPrefix"];
 		$this->maxChans = $servSettings["MaxChans"];
 		
-		$this->SocketHandler = new \GearsIRCd\Sockets($this->addr);
+		$this->SocketHandler = new Sockets($this->addr);
 		$this->reservedNicks = array("nickserv", "chanserv", "botserv", "operserv");
+		$this->addOperators($opers);
 	}
 	
 	public function startServer() {
 		$this->servSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-		socket_bind($this->servSocket, "0.0.0.0", $this->port);
+		socket_bind($this->servSocket, $this->ip, $this->port);
 		socket_listen($this->servSocket, $this->maxUsers);
 		socket_set_nonblock($this->servSocket);
 		
@@ -49,11 +51,15 @@ class Server extends Commands
 			fclose($cHandle);
 		}
 		
-		\GearsIRCd\Debug::printLn("Server started");
+		Debug::printLn("Server started");
+		
+		while (true) {
+			$this->listenOnce();
+		}
 	}
 	
-	public function addOperator($operSettings) {
-		$this->configOpers[] = $operSettings;
+	public function addOperators($operSettings) {
+		$this->configOpers = $operSettings;
 	}
 	
 	public function listenOnce() {
@@ -72,12 +78,12 @@ class Server extends Commands
 			if (!$usrHostname) {
 				$usrHostname = $usrIP;
 			}
-			$usrHostmask = \GearsIRCd\Utilities::CreateHostmask($usrHostname, $this->prefix, $usrIP);
+			$usrHostmask = Utilities::CreateHostmask($usrHostname, $this->prefix, $usrIP);
 			$this->SocketHandler->sendData($incomingUsr, "NOTICE AUTH :*** Found your hostname");
 			
-			\GearsIRCd\Debug::printLn("Incoming user with IP " . $usrIP . ", Hostmask: " . $usrHostmask);
+			Debug::printLn("Incoming user with IP " . $usrIP . ", Hostmask: " . $usrHostmask);
 			
-			$newUsrObj = New \GearsIRCd\User($incomingUsr, $this->uniqCount, $usrIP, $usrHostname);
+			$newUsrObj = New User($incomingUsr, $this->uniqCount, $usrIP, $usrHostname);
 			$newUsrObj->Hostmask($usrHostmask);
 			$this->allUsers[] = $newUsrObj;
 		}
@@ -89,7 +95,7 @@ class Server extends Commands
 				$readLines = explode("\n", $readRaw);
 				
 				foreach ($readLines as $readLine) {
-					$this->HandleCommand($User, $UsrIndex, $readLine);
+					CommandHandler::handle($this, $User, $UsrIndex, $readLine);
 				}
 			}
 		}

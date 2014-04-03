@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class User
-{
+class User {
 	private $nickName = null;
 	private $ident = null;
 	private $realName = null;
@@ -30,7 +29,7 @@ class User
 	public function Nick($newValue = "", $reserved = array(), $users = array()) {
 		if (!empty($newValue)) {
 			$newValue = trim($newValue);
-			$isValid = \GearsIRCd\Utilities::ValidateNick($newValue);
+			$isValid = Utilities::ValidateNick($newValue);
 			
 			foreach ($users as $user) {
 				if (strtolower($user->Nick()) === strtolower($newValue)) {
