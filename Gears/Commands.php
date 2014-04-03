@@ -48,6 +48,10 @@ class Commands
 				$this->RespondOper($user, $recvArgs);
 				break;
 				
+			case "mode":
+				$this->RespondMode($user, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -414,6 +418,48 @@ class Commands
 					// issue KILL for user here
 				}
 			}
+		}
+	}
+	
+	public function RespondMode($user, $args) {
+		if (isset($args[1]) && isset($args[2])) {
+			if (substr($args[1], 0, 1) == "#") {
+				// channel
+				if (isset($args[3])) {
+					switch ($args[2]) {
+						case "+o":
+							// handle mode +o
+							break;
+							
+						case "-o":
+							// handle mode -o
+							break;
+							
+						default:
+							break;
+					}
+				}
+				else {
+					// missing parameters
+				}
+			}
+			else if ($args[1] == $user) {
+				// user
+				switch ($args[2]) {
+					case "+x":
+						// handle fakehost mode
+						break;
+						
+					default:
+						break;
+				}
+			}
+			else {
+				// no permissions
+			}
+		}
+		else {
+			// missing parameters
 		}
 	}
 }
