@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Commands
-{	
+class Commands {	
 	public function HandleCommand($user, $index, $line) {
 		$recvArgs = explode(" ", $line);
 		$cmdRecv = strtolower($recvArgs[0]);
@@ -136,7 +135,7 @@ class Commands
 				$channel = trim($channel);
 				if (substr($channel, 0, 1) == "#") {
 				
-					if (!\GearsIRCd\Utilities::ValidateChannel($channel)) {
+					if (!Utilities::ValidateChannel($channel)) {
 						$this->SocketHandler->sendData($user->Socket(), "403 " . $user->Nick() . " " . $channel . " :No such channel");
 						break;
 					}
@@ -157,7 +156,7 @@ class Commands
 							$addUser = $this->allChannels[$cIndex]->AddUser($user);
 							if ($addUser === true) {
 								foreach ($this->allChannels[$cIndex]->users as $cUser) {
-									$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " JOIN " . $this->allChannels[$cIndex]->Name());
+									$this->SocketHandler->sendRaw($cUser->Socket(), ":" . Utilities::UserToFullHostmask($user) . " JOIN " . $this->allChannels[$cIndex]->Name());
 								}
 								// services stuff here for later (chanserv)
 							}
@@ -168,7 +167,7 @@ class Commands
 						}
 					}
 					else {
-						$newChannel = new \GearsIRCd\Channel($channel);
+						$newChannel = new Channel($channel);
 						$newChannel->AddUser($user);
 						$this->allChannels[] = $newChannel;
 						$this->SocketHandler->sendCommand($user, "JOIN " . $channel);
@@ -201,7 +200,7 @@ class Commands
 						$chanObj = $this->allChannels[$chanIndex];
 						if ($chanObj->IsUserInChannel($user)) {
 							foreach ($chanObj->users as $cUser) {
-								$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " PART " . $chanObj->Name());
+								$this->SocketHandler->sendRaw($cUser->Socket(), ":" . Utilities::UserToFullHostmask($user) . " PART " . $chanObj->Name());
 							}
 							$chanObj->RemoveUser($user);
 						}
@@ -296,7 +295,7 @@ class Commands
 							$chanTopic = $chan->Topic($newTopic, $user);
 							
 							foreach ($chan->users as $cUser) {
-								$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " TOPIC " . $chan->Name() . " :" . $chanTopic[0]);
+								$this->SocketHandler->sendRaw($cUser->Socket(), ":" . Utilities::UserToFullHostmask($user) . " TOPIC " . $chan->Name() . " :" . $chanTopic[0]);
 							}
 							return true;
 						}
@@ -343,7 +342,7 @@ class Commands
 								else {									
 									foreach ($chan->users as $cUser) {
 										if ($cUser != $user) {
-											$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " PRIVMSG " . $chanTo . " :" . $msg);
+											$this->SocketHandler->sendRaw($cUser->Socket(), ":" . Utilities::UserToFullHostmask($user) . " PRIVMSG " . $chanTo . " :" . $msg);
 										}
 									}
 								}
@@ -378,7 +377,7 @@ class Commands
 						foreach ($this->allUsers as $serverUser) {
 							if (strtolower($serverUser->Nick()) == strtolower($chanTo)) {
 								$userExists = true;
-								$this->SocketHandler->sendRaw($serverUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " PRIVMSG " . $serverUser->Nick() . " :" . $msg);
+								$this->SocketHandler->sendRaw($serverUser->Socket(), ":" . Utilities::UserToFullHostmask($user) . " PRIVMSG " . $serverUser->Nick() . " :" . $msg);
 								break;
 							}
 						}

@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Debug
-{
+class Debug {
 	public static $debugEnabled = true;
 	
 	public static function printLn($str) {

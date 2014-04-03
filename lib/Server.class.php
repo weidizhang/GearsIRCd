@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Server extends Commands
-{
+class Server extends Commands {
 	protected $name;
 	protected $addr;
 	protected $port = 6667;
@@ -22,7 +21,7 @@ class Server extends Commands
 	protected $reservedNicks;
 	protected $SocketHandler;			
 	
-	public function __construct($servSettings) {
+	public function __construct(Array $servSettings, Array $opers) {
 		$this->name = $servSettings["Name"];
 		$this->addr = $servSettings["Address"];
 		$this->port = $servSettings["Port"];
@@ -32,8 +31,9 @@ class Server extends Commands
 		$this->prefix = $servSettings["HostPrefix"];
 		$this->maxChans = $servSettings["MaxChans"];
 		
-		$this->SocketHandler = new \GearsIRCd\Sockets($this->addr);
+		$this->SocketHandler = new Sockets($this->addr);
 		$this->reservedNicks = array("nickserv", "chanserv", "botserv", "operserv");
+		$this->addOperators($opers);
 	}
 	
 	public function startServer() {
@@ -49,11 +49,15 @@ class Server extends Commands
 			fclose($cHandle);
 		}
 		
-		\GearsIRCd\Debug::printLn("Server started");
+		Debug::printLn("Server started");
+		
+		while (true) {
+			$this->listenOnce();
+		}
 	}
 	
-	public function addOperator($operSettings) {
-		$this->configOpers[] = $operSettings;
+	public function addOperators($operSettings) {
+		$this->configOpers = $operSettings;
 	}
 	
 	public function listenOnce() {
@@ -72,12 +76,12 @@ class Server extends Commands
 			if (!$usrHostname) {
 				$usrHostname = $usrIP;
 			}
-			$usrHostmask = \GearsIRCd\Utilities::CreateHostmask($usrHostname, $this->prefix, $usrIP);
+			$usrHostmask = Utilities::CreateHostmask($usrHostname, $this->prefix, $usrIP);
 			$this->SocketHandler->sendData($incomingUsr, "NOTICE AUTH :*** Found your hostname");
 			
-			\GearsIRCd\Debug::printLn("Incoming user with IP " . $usrIP . ", Hostmask: " . $usrHostmask);
+			Debug::printLn("Incoming user with IP " . $usrIP . ", Hostmask: " . $usrHostmask);
 			
-			$newUsrObj = New \GearsIRCd\User($incomingUsr, $this->uniqCount, $usrIP, $usrHostname);
+			$newUsrObj = New User($incomingUsr, $this->uniqCount, $usrIP, $usrHostname);
 			$newUsrObj->Hostmask($usrHostmask);
 			$this->allUsers[] = $newUsrObj;
 		}

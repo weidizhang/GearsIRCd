@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Utilities
-{
+class Utilities {
 	public static function ValidateNick($nick) {
 		return preg_match("/\A[a-z_\-\[\]\\^{}|`][a-z0-9_\-\[\]\\^{}|`]{1,17}\z/i", $nick);
 	}

@@ -1,8 +1,7 @@
 <?php
-namespace GearsIRCd;
+namespace GearsIRCd\lib;
 
-class Channel
-{
+class Channel {
 	public $users = array();
 	
 	private $q = array();
@@ -39,12 +38,12 @@ class Channel
 	}
 	
 	public function RemoveUser($user) {
-		$this->users = \GearsIRCd\Utilities::RemoveFromArray($this->users, $user);
-		$this->q = \GearsIRCd\Utilities::RemoveFromArray($this->q, $user);
-		$this->a = \GearsIRCd\Utilities::RemoveFromArray($this->a, $user);
-		$this->o = \GearsIRCd\Utilities::RemoveFromArray($this->o, $user);
-		$this->h = \GearsIRCd\Utilities::RemoveFromArray($this->h, $user);
-		$this->v = \GearsIRCd\Utilities::RemoveFromArray($this->v, $user);
+		$this->users = Utilities::RemoveFromArray($this->users, $user);
+		$this->q = Utilities::RemoveFromArray($this->q, $user);
+		$this->a = Utilities::RemoveFromArray($this->a, $user);
+		$this->o = Utilities::RemoveFromArray($this->o, $user);
+		$this->h = Utilities::RemoveFromArray($this->h, $user);
+		$this->v = Utilities::RemoveFromArray($this->v, $user);
 		return true;
 	}
 	
@@ -126,7 +125,7 @@ class Channel
 	
 	public function IsBanned($user) {
 		foreach ($this->banned as $ban) {
-			if (\GearsIRCd\Utilities::MatchHostmask(\GearsIRCd\Utilities::UserToFullHostmask($user), $ban)) {
+			if (Utilities::MatchHostmask(Utilities::UserToFullHostmask($user), $ban)) {
 				return true;
 			}
 		}
