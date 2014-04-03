@@ -1,25 +1,25 @@
 <?php
 namespace GearsIRCd\lib;
 
-class Server extends Commands {
-	protected $name;
-	protected $addr;
-	protected $port = 6667;
-	protected $motd;
-	protected $maxUsers = 75;
-	protected $packetLen = 512;
-	protected $prefix = "irc";
-	protected $maxChans = 25;	
-	protected $ircdVer = "GearsIRCd Alpha";	
+class Server {
+	public $name;
+	public $addr;
+	public $port = 6667;
+	public $motd;
+	public $maxUsers = 75;
+	public $packetLen = 512;
+	public $prefix = "irc";
+	public $maxChans = 25;	
+	public $ircdVer = "GearsIRCd Alpha";	
 	
 	private $servSocket;
 	private $uniqCount = 0;
 	
-	protected $allUsers = array();
-	protected $allChannels = array();
-	protected $configOpers = array();
-	protected $reservedNicks;
-	protected $SocketHandler;			
+	public $allUsers = array();
+	public $allChannels = array();
+	public $configOpers = array();
+	public $reservedNicks;
+	public $SocketHandler;			
 	
 	public function __construct(Array $servSettings, Array $opers) {
 		$this->name = $servSettings["Name"];
@@ -93,7 +93,7 @@ class Server extends Commands {
 				$readLines = explode("\n", $readRaw);
 				
 				foreach ($readLines as $readLine) {
-					$this->HandleCommand($User, $UsrIndex, $readLine);
+					CommandHandler::handle($this, $User, $UsrIndex, $readLine);
 				}
 			}
 		}
