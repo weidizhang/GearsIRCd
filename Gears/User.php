@@ -12,7 +12,7 @@ class User
 	public $failedOperAttempts = 0;
 	
 	private $ipAddr;
-	private $hostName;
+	public $hostName;
 	private $hostMask;
 	
 	private $ping;

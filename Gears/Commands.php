@@ -48,6 +48,10 @@ class Commands
 				$this->RespondOper($user, $recvArgs);
 				break;
 				
+			case "chghost":
+				$this->RespondChghost($user, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -403,6 +407,7 @@ class Commands
 					$isOper = true;
 					$user->Operator(true);
 					$this->SocketHandler->sendData($user->Socket(), "381 " . $user->Nick() . " :You are now an IRC Operator");
+					$this->Services->OperServ->RespondOperUp($this->allUsers, $user);
 					break;
 				}
 			}
@@ -410,10 +415,43 @@ class Commands
 			if ($isOper === false) {
 				$this->SocketHandler->sendData($user->Socket(), "491 " . $user->Nick() . " :No O-lines for your host");
 				$user->failedOperAttempts++;
-				if ($user->failedOperAttempts >= 6) {
+				if ($user->failedOperAttempts >= 5) {
 					// issue KILL for user here
 				}
 			}
+		}
+	}
+	
+	public function RespondChghost($user, $args) {
+		if ($user->Operator()) {
+			if (isset($args[2])) {				
+				$nick = $args[1];
+				$newHost = $args[2];
+				
+				$userExists = false;
+				foreach ($this->allUsers as $servUser) {
+					if (strtolower($servUser->Nick()) === strtolower($nick)) {
+						$userExists = true;
+						if (\GearsIRCd\Utilities::ValidateHostmask($newHost)) {
+							$user->Hostmask($newHost);
+						}
+						else {
+							$this->SocketHandler->sendData($user->Socket(), "NOTICE " . $user->Nick() . " :*** /ChgHost Error: A hostname may contain a-z, A-Z, 0-9, '-' & '.' - Please only use them");
+						}
+						break;
+					}
+				}
+				
+				if (!$userExists) {
+					$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $nick . " :No such nick/channel");
+				}
+			}
+			else {
+				$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " CHGHOST :Not enough parameters");
+			}
+		}
+		else {
+			$this->SocketHandler->sendData($user->Socket(), "481 " . $user->Nick() . " :Permission Denied- You do not have the correct IRC operator privileges");
 		}
 	}
 }

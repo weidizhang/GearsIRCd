@@ -20,7 +20,9 @@ class Server extends Commands
 	protected $allChannels = array();
 	protected $configOpers = array();
 	protected $reservedNicks;
-	protected $SocketHandler;			
+	protected $SocketHandler;
+	
+	protected $Services;
 	
 	public function __construct($servSettings) {
 		$this->name = $servSettings["Name"];
@@ -34,6 +36,8 @@ class Server extends Commands
 		
 		$this->SocketHandler = new \GearsIRCd\Sockets($this->addr);
 		$this->reservedNicks = array("nickserv", "chanserv", "botserv", "operserv");
+		
+		$this->Services = new \GearsIRCd\Services($this->SocketHandler);
 	}
 	
 	public function startServer() {

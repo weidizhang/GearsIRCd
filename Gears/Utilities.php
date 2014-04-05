@@ -11,8 +11,15 @@ class Utilities
 		return preg_match('/^#[a-zA-Z0-9`~!@#$%^&*\(\)\'";|}{\]\[.<>?]{0,20}$/', $chan);
 	}
 	
-	public static function UserToFullHostmask($user) {
-		return $user->Nick() . "!" . $user->Ident() . "@" . $user->Hostmask();
+	public static function ValidateHostmask($mask) {
+		return (!preg_match("/[^-A-Za-z0-9.]/", $mask));
+	}
+	
+	public static function UserToFullHostmask($user, $opermode = false) {
+		if ($opermode === false) {
+			return $user->Nick() . "!" . $user->Ident() . "@" . $user->Hostmask();
+		}
+		return $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName;
 	}
 	
 	public static function MatchHostmask($orig, $toMatch) {
