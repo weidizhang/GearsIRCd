@@ -1,0 +1,30 @@
+{
+    "Server": {
+        "Name": "GearsIRC",
+        "Address": "irc.basedgod.gov",
+        "ServicesAddress": "services.basedgod.gov",
+        "Port": 6667,
+        "MOTD": "Welcome to the GearsIRCd test server. \nEnjoy your stay!",
+        "MaxUsers": 25,
+        "MaxPacketLen": 512,
+        "HostPrefix": "irc",
+        "MaxChans": 20
+    },
+    "Operators": [
+        {
+            "Username": "BasedGod",
+            "Password": "0e3b78d8380844b0f697bb912da7f4d210382c6714194fd16039ef2acd924dcf",
+            "PasswordHashMethod": "haval256,3"
+        }
+    ],
+    "HelpInformation": {
+        "Server": {
+            "MaxPacketLen": "Leave it at the default 512 if you don't know what it's for",
+            "MaxChans": "Maximum number of channels a user is allowed to join"
+        },
+        "Operators": {
+            "Password": "Plain text is not supported for security reasons, the example operator's password is 123456",
+            "PasswordHashMethod": "Anything supported by the PHP hash() function (Most common: md5, sha1, sha256)"
+        }
+    }
+}
