@@ -9,7 +9,6 @@ class OperServ
 	
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
-		$this->ServicesAddr = $servAddr;
 		
 		$this->fakeUser = new \GearsIRCd\User(false, -1, "127.0.0.1", "localhost");
 		$this->fakeUser->Operator(true);
