@@ -37,7 +37,7 @@ class Server extends Commands
 		$this->SocketHandler = new \GearsIRCd\Sockets($this->addr);
 		$this->reservedNicks = array("nickserv", "chanserv", "botserv", "operserv");
 		
-		$this->Services = new \GearsIRCd\Services($this->SocketHandler);
+		$this->Services = new \GearsIRCd\Services($this->SocketHandler, $servSettings["ServicesAddress"]);
 	}
 	
 	public function startServer() {
@@ -89,7 +89,7 @@ class Server extends Commands
 	
 	private function readUserData() {
 		foreach ($this->allUsers as $UsrIndex => $User) {
-			while ($readRaw = trim($this->SocketHandler->readData($User->Socket(), $this->packetLen))) {
+			while (@$readRaw = trim($this->SocketHandler->readData($User->Socket(), $this->packetLen))) {
 				$readLines = explode("\n", $readRaw);
 				
 				foreach ($readLines as $readLine) {

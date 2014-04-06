@@ -22,6 +22,10 @@ class Utilities
 		return $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName;
 	}
 	
+	public static function UserToShortHostmask($user) {
+		return $user->Ident() . "@" . $user->hostName;
+	}
+	
 	public static function MatchHostmask($orig, $toMatch) {
 		$orig = strtolower($orig);
 		$toMatch = strtolower($toMatch);

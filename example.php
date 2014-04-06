@@ -6,8 +6,9 @@ foreach (glob("./Gears/*.php") as $gearsClass) {
 //do not modify anything about this line
 
 $ircServer = new \GearsIRCd\Server(array(
-	"Name" => "BasedIRC",
+	"Name" => "GearsIRC",
 	"Address" => "irc.basedgod.gov",
+	"ServicesAddress" => "services.basedgod.gov",
 	"Port" => 6667,
 	"MOTD" => "Welcome to the GearsIRCd test server. \nEnjoy your stay!",
 	"MaxUsers" => 25,
@@ -25,5 +26,6 @@ $ircServer->addOperator(array(
 $ircServer->startServer();
 while (true) {
 	$ircServer->listenOnce();
+	usleep(200000); // so the CPU load doesn't get too high
 }
 ?>

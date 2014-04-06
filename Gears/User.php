@@ -27,7 +27,12 @@ class User
 		$this->hostName = $hostname;
 	}
 	
-	public function Nick($newValue = "", $reserved = array(), $users = array()) {
+	public function Nick($newValue = "", $reserved = array(), $users = array(), $bypassAll = false) {
+		if ($bypassAll === true) {
+			$this->nickName = $newValue;
+			return true;
+		}
+		
 		if (!empty($newValue)) {
 			$newValue = trim($newValue);
 			$isValid = \GearsIRCd\Utilities::ValidateNick($newValue);

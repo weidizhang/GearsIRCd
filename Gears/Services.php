@@ -8,8 +8,8 @@ class Services
 	public $ChanServ;
 	public $BotServ;
 	
-	public function __construct($sh) {
-		$this->OperServ = new \GearsIRCd\OperServ($sh);
+	public function __construct($sh, $servicesAddr) {
+		$this->OperServ = new \GearsIRCd\OperServ($sh, $servicesAddr);
 	}
 }
 ?>

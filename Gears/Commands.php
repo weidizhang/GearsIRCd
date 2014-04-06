@@ -52,6 +52,14 @@ class Commands
 				$this->RespondChghost($user, $recvArgs);
 				break;
 				
+			case "quit":
+				$this->RespondQuit($user, $line);
+				break;
+				
+			case "kill":
+				$this->RespondKill($user, $line, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -121,6 +129,8 @@ class Commands
 				$this->SocketHandler->sendData($user->Socket(), $msgArgs[0] . " " . $user->Nick() . " " . $msgArgs[1]);
 			}
 			$this->RespondMotd($user);
+			
+			$this->Services->OperServ->RespondClientJoin($this->allUsers, $user, $this->port);
 		}
 	}
 	
@@ -397,7 +407,10 @@ class Commands
 	}
 	
 	public function RespondOper($user, $args) {
-		if (isset($args[2])) {
+		if ($user->Operator()) {
+			$this->SocketHandler->sendData($user->Socket(), "381 " . $user->Nick() . " :You are now an IRC Operator");
+		}		
+		elseif (isset($args[2])) {
 			$username = $args[1];
 			$password = $args[2];
 			
@@ -415,8 +428,9 @@ class Commands
 			if ($isOper === false) {
 				$this->SocketHandler->sendData($user->Socket(), "491 " . $user->Nick() . " :No O-lines for your host");
 				$user->failedOperAttempts++;
+				$this->Services->OperServ->RespondFailedOper($this->allUsers, $user);
 				if ($user->failedOperAttempts >= 5) {
-					// issue KILL for user here
+					$this->RespondKill($this->Services->OperServ->AsUser(), "KILL " . $user->Nick() . " :Too many failed oper attempts", array(true, $user->Nick(), true));
 				}
 			}
 		}
@@ -448,6 +462,69 @@ class Commands
 			}
 			else {
 				$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " CHGHOST :Not enough parameters");
+			}
+		}
+		else {
+			$this->SocketHandler->sendData($user->Socket(), "481 " . $user->Nick() . " :Permission Denied- You do not have the correct IRC operator privileges");
+		}
+	}
+	
+	public function RespondQuit($user, $line, $killMsg = "") {
+		socket_close($user->Socket());
+		$quitMessage = "Quit: ";
+		$customQuit = strpos($line, ":");
+		if ($customQuit !== false) {
+			$quitMessage = "Quit: " . substr($line, $customQuit + 1);
+		}
+		if (!empty($killMsg)) {
+			$quitMessage = $killMsg;
+		}
+		
+		$sentTo = array($user);
+		foreach ($this->allChannels as $chan) {
+			if ($chan->IsUserInChannel($user)) {
+				$chan->RemoveUser($user);
+				
+				foreach ($chan->users as $cUser) {
+					if (!in_array($cUser, $sentTo)) {
+						$this->SocketHandler->sendRaw($cUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " QUIT :" . $quitMessage);
+						$sentTo[] = $cUser;
+					}
+				}
+			}
+		}
+				
+		$this->allUsers = \GearsIRCd\Utilities::RemoveFromArray($this->allUsers, $user);
+		$this->Services->OperServ->RespondClientQuit($this->allUsers, $user, $quitMessage);		
+	}
+	
+	public function RespondKill($user, $line, $args) {
+		if ($user->Operator()) {
+			if (isset($args[2])) {
+				$nick = $args[1];
+				$userExists = false;
+				$userKill = null;
+				foreach ($this->allUsers as $servUser) {
+					if (strtolower($servUser->Nick()) === strtolower($nick)) {
+						$userExists = true;
+						$userKill = $servUser;
+						break;
+					}
+				}
+				
+				if ($userExists) {
+					$killReason = substr($line, strpos($line, ":") + 1);
+					$killMsg = "[" . $this->addr . "] Local kill by " . $user->Nick() . " (" . $killReason . ")";
+					$this->Services->OperServ->RespondKill($this->allUsers, $userKill, $user, $killReason);
+					$this->SocketHandler->sendRaw($userKill->Socket(), "ERROR :Closing Link: " . $userKill->Nick() . "[" . $userKill->hostName . "] " . $user->Nick() . " (" . $killMsg . ")");
+					$this->RespondQuit($userKill, "", $killMsg);
+				}
+				else {
+					$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $nick . " :No such nick/channel");
+				}
+			}
+			else {
+				$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " KILL :Not enough parameters");				
 			}
 		}
 		else {
