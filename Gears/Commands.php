@@ -60,6 +60,10 @@ class Commands
 				$this->RespondKill($user, $line, $recvArgs);
 				break;
 				
+			case "mode":
+				$this->RespondMode($user, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -529,6 +533,153 @@ class Commands
 		}
 		else {
 			$this->SocketHandler->sendData($user->Socket(), "481 " . $user->Nick() . " :Permission Denied- You do not have the correct IRC operator privileges");
+		}
+	}
+	
+	public function RespondMode($user, $args) {
+		if (isset($args[1])) {
+			$channel = $args[1];
+			if (substr($channel, 0, 1) == "#") {
+				$chanObj = null;
+				$chanExists = false;
+				foreach ($this->allChannels as $chan) {
+					if (strtolower($channel) === strtolower($chan->Name())) {
+						$chanObj = $chan;
+						$chanExists = true;
+						break;
+					}
+				}
+				
+				if ($chanExists) {
+					if (isset($args[2])) {
+						if ($chanObj->IsHalfOpOrAbove($user)) {
+							$curMode = "+";
+							$modes = str_split($args[2]);
+							$modeArgIndex = 2;						
+							
+							$lastMode = "+";
+							$changeModes = "";
+							$changeArgs = "";
+							
+							foreach ($modes as $mode) {
+								switch ($mode) {
+									case "+":
+										$curMode = "+";
+										break;
+										
+									case "-":
+										$curMode = "-";
+										break;
+										
+									case "q":
+									case "a":
+									case "o":
+									case "h":
+									case "v":
+										$userExists = false;
+										$chanUser = null;
+										$modeArgIndex++;
+										if (isset($args[$modeArgIndex])) {
+											$userNick = $args[$modeArgIndex];
+											foreach ($chanObj->users as $cUser) {
+												if (strtolower($userNick) === strtolower($cUser->Nick())) {
+													$userExists = true;
+													$chanUser = $cUser;
+													break;
+												}
+											}
+											
+											if ($userExists) {
+												$modeFunction = strtr($mode, array(
+													"q" => "OwnerMode",
+													"a" => "AdminMode",
+													"o" => "OperatorMode",
+													"h" => "HalfopMode",
+													"v" => "VoiceMode"
+												));
+												$permissionFunction = strtr($mode, array(
+													"q" => "OwnerMode",
+													"a" => "OwnerMode",
+													"o" => "IsOpOrAbove",
+													"h" => "IsOpOrAbove",
+													"v" => "IsHalfOpOrAbove"
+												));
+												
+												$isAlreadyMode = call_user_func(array($chanObj, $modeFunction), $chanUser);
+												if ((!$isAlreadyMode && $curMode == "+") || ($isAlreadyMode && $curMode == "-")) {
+													$userCanSet = call_user_func(array($chanObj, $permissionFunction), $user);
+													if ($userCanSet) {
+														call_user_func(array($chanObj, $modeFunction), $chanUser, true);
+														if (($changeModes == "") || ($lastMode != $curMode)) {
+															$changeModes .= $curMode . $mode;
+															$lastMode = $curMode;
+														}
+														else {
+															$changeModes .= $mode;
+														}
+														$changeArgs .= $chanUser->Nick() . " ";
+													}
+													else {
+														if ($chanObj->HalfopMode($user) && !$chanObj->IsOpOrAbove($user)) {
+															$this->SocketHandler->sendData($user->Socket(), "460 " . $user->Nick() . " :Halfops cannot set mode " . $mode);
+														}
+														else {
+															$this->SocketHandler->sendData($user->Socket(), "499 " . $user->Nick() . " " . $chanObj->Name() . " :You're not a channel owner");
+														}
+													}
+												}
+											}
+											else {
+												$userIsOnServer = false;
+												$actualNick = null;
+												foreach ($this->allUsers as $serverUser) {
+													if (strtolower($serverUser->Nick()) === strtolower($userNick)) {
+														$userIsOnServer = true;
+														$actualNick = $serverUser->Nick();
+														break;
+													}
+												}
+												
+												if ($userIsOnServer) {
+													$this->SocketHandler->sendData($user->Socket(), "441 " . $user->Nick() . " " . $actualNick . " " . $chanObj->Name() . " :They aren't on that channel");
+												}
+												else {
+													$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $userNick . " :No such nick/channel");
+												}
+											}
+										}
+										break;
+										
+									default:
+										// (x) is unknown mode char to me
+										break;
+								}
+							}
+							
+							if (!empty($changeModes)) {
+								foreach ($chanObj->users as $chanUser) {
+									$this->SocketHandler->sendRaw($chanUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " MODE " . $chanObj->Name() . " " . $changeModes . " " . trim($changeArgs));
+								}
+							}
+						}
+						else {
+							$this->SocketHandler->sendData($user->Socket(), "482 " . $user->Nick() . " " . $chanObj->Name() . " :You're not channel operator");
+						}					
+					}
+					else {
+						// to-do: return channel modes
+					}
+				}
+				else {
+					$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $channel . " :No such nick/channel");
+				}
+			}
+			else {
+				// to-do: user modes
+			}
+		}
+		else {
+			$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " MODE :Not enough parameters");
 		}
 	}
 }

@@ -66,16 +66,22 @@ class Channel
 			if (!in_array($user, $this->q)) {
 				$this->q[] = $user;
 			}
+			else {
+				$this->q = \GearsIRCd\Utilities::RemoveFromArray($this->q, $user);
+			}
 			return true;
 		}
 		
 		return in_array($user, $this->q);
 	}
 	
-	public function AdminMode($user = null, $addUser = false) {
+	public function AdminMode($user, $addUser = false) {
 		if ($addUser === true) {
 			if (!in_array($user, $this->a)) {
 				$this->a[] = $user;
+			}
+			else {
+				$this->a = \GearsIRCd\Utilities::RemoveFromArray($this->a, $user);
 			}
 			return true;
 		}
@@ -83,10 +89,13 @@ class Channel
 		return in_array($user, $this->a);
 	}
 	
-	public function OperatorMode($user = null, $addUser = false) {
+	public function OperatorMode($user, $addUser = false) {
 		if ($addUser === true) {
 			if (!in_array($user, $this->o)) {
 				$this->o[] = $user;
+			}
+			else {
+				$this->o = \GearsIRCd\Utilities::RemoveFromArray($this->o, $user);
 			}
 			return true;
 		}
@@ -94,10 +103,13 @@ class Channel
 		return in_array($user, $this->o);
 	}
 	
-	public function HalfopMode($user = null, $addUser = false) {
+	public function HalfopMode($user, $addUser = false) {
 		if ($addUser === true) {
 			if (!in_array($user, $this->h)) {
 				$this->h[] = $user;
+			}
+			else {
+				$this->h = \GearsIRCd\Utilities::RemoveFromArray($this->h, $user);
 			}
 			return true;
 		}
@@ -105,10 +117,13 @@ class Channel
 		return in_array($user, $this->h);
 	}
 	
-	public function VoiceMode($user = null, $addUser = false) {
+	public function VoiceMode($user, $addUser = false) {
 		if ($addUser === true) {
 			if (!in_array($user, $this->v)) {
 				$this->v[] = $user;
+			}
+			else {
+				$this->v = \GearsIRCd\Utilities::RemoveFromArray($this->v, $user);
 			}
 			return true;
 		}
