@@ -564,11 +564,8 @@ class Commands
 							foreach ($modes as $mode) {
 								switch ($mode) {
 									case "+":
-										$curMode = "+";
-										break;
-										
 									case "-":
-										$curMode = "-";
+										$curMode = $mode;
 										break;
 										
 									case "q":
@@ -650,15 +647,42 @@ class Commands
 										}
 										break;
 										
+									case "m":
+										$successfulChange = false;
+										if ($chanObj->ModerationMode() && ($curMode == "-")) {
+											$chanObj->ModerationMode(false);
+											$successfulChange = true;
+										}
+										elseif (!$chanObj->ModerationMode() && ($curMode == "+")) {
+											$chanObj->ModerationMode(true);
+											$successfulChange = true;
+										}
+										
+										if ($successfulChange) {
+											if (($changeModes == "") || ($lastMode != $curMode)) {
+												$changeModes .= $curMode . $mode;
+												$lastMode = $curMode;
+											}
+											else {
+												$changeModes .= $mode;
+											}
+										}
+										break;
+										
 									default:
-										// (x) is unknown mode char to me
+										$this->SocketHandler->sendData($user->Socket(), "472 " . $user->Nick() . " " . $mode . " :is unknown mode char to me");
 										break;
 								}
 							}
 							
 							if (!empty($changeModes)) {
+								$changeArgsStr =  " " . trim($changeArgs);
+								$modeCommand = ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " MODE " . $chanObj->Name() . " " . $changeModes;
+								if ($changeArgsStr != " ") {
+									$modeCommand .= $changeArgsStr;
+								}
 								foreach ($chanObj->users as $chanUser) {
-									$this->SocketHandler->sendRaw($chanUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " MODE " . $chanObj->Name() . " " . $changeModes . " " . trim($changeArgs));
+									$this->SocketHandler->sendRaw($chanUser->Socket(), $modeCommand);
 								}
 							}
 						}

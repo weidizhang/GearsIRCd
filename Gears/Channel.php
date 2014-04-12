@@ -132,7 +132,7 @@ class Channel
 	}
 	
 	public function ModerationMode($on = null) {
-		if (is_bool($on) && $on != null) {
+		if (is_bool($on)) {
 			$this->plusModeration = $on;
 			return true;
 		}
