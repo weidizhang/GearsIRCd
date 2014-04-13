@@ -669,6 +669,53 @@ class Commands
 										}
 										break;
 										
+									case "b":
+										$modeArgIndex++;
+										if (isset($args[$modeArgIndex])) {
+											$banMask = $args[$modeArgIndex];											
+											if ((strpos($banMask, "@") === false) && (strpos($banMask, "!") === false)) {
+												$banMask .= "!*@*";
+											}
+											else {
+												if ((strpos($banMask, "@") !== false) && (strpos($banMask, "!") === false)) {
+													$banMask = "*!" . $banMask;
+												}
+												
+												if (substr($banMask, -1) == "@") {
+													$banMask .= "*";
+												}
+												
+												if (substr($banMask, 0, 1) == "!") {
+													$banMask = "*" . $banMask;
+												}
+												
+												$exclaimLoc = strpos($banMask, "!@");
+												if (($exclaimLoc !== false) && (substr_count($banMask, "!") == 1)) {
+													$banMask = substr_replace($banMask, "!*@", $exclaimLoc, strlen("!@"));
+												}
+											}
+											
+											$curBool = (bool) strtr($curMode, array("+" => 1, "-" => 0));
+											$banResponse = $chanObj->BanMode($curBool, $banMask, $user->Nick());
+											if ($banResponse) {
+												if (($changeModes == "") || ($lastMode != $curMode)) {
+													$changeModes .= $curMode . $mode;
+													$lastMode = $curMode;
+												}
+												else {
+													$changeModes .= $mode;
+												}
+												$changeArgs .= $banMask . " ";
+											}
+										}
+										else {
+											foreach ($chanObj->banned as $ban) {
+												$this->SocketHandler->sendData($user->Socket(), "367 " . $user->Nick() . " " . $chanObj->Name() . " " . $ban["Mask"] . " " . $ban["SetBy"] . " " . $ban["Time"]);
+											}
+											$this->SocketHandler->sendData($user->Socket(), "368 " . $user->Nick() . " " . $chanObj->Name() . " :End of Channel Ban List");
+										}
+										break;
+										
 									default:
 										$this->SocketHandler->sendData($user->Socket(), "472 " . $user->Nick() . " " . $mode . " :is unknown mode char to me");
 										break;

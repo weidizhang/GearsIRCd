@@ -4,6 +4,7 @@ namespace GearsIRCd;
 class Channel
 {
 	public $users = array();
+	public $banned = array();
 	
 	private $q = array();
 	private $a = array();
@@ -15,8 +16,7 @@ class Channel
 	private $topicTime = null;
 	private $topicUser = null;	
 	
-	private $inviteOnly = false;
-	private $banned = array();
+	private $inviteOnly = false;	
 	private $plusModeration = false;
 	
 	private $channelName;
@@ -139,9 +139,30 @@ class Channel
 		return $this->plusModeration;
 	}
 	
+	public function BanMode($bool, $mask, $setby = null) {
+		if (($bool === true) && (!empty($setby))) {
+			if (!isset($this->banned[strtolower($mask)])) {
+				$this->banned[strtolower($mask)] = array(
+					"Mask" => $mask,
+					"SetBy" => $setby,
+					"Time" => time()
+				);
+				return true;
+			}
+			return false;
+		}
+		elseif ($bool === false) {
+			if (isset($this->banned[strtolower($mask)])) {
+				unset($this->banned[strtolower($mask)]);
+				return true;
+			}
+			return false;
+		}
+	}
+	
 	public function IsBanned($user) {
-		foreach ($this->banned as $ban) {
-			if (\GearsIRCd\Utilities::MatchHostmask(\GearsIRCd\Utilities::UserToFullHostmask($user), $ban)) {
+		foreach ($this->banned as $banMask => $ban) {
+			if (\GearsIRCd\Utilities::MatchHostmask(\GearsIRCd\Utilities::UserToFullHostmask($user), $banMask)) {
 				return true;
 			}
 		}
