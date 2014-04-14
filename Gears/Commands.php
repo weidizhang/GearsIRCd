@@ -1,4 +1,11 @@
 <?php
+/**
+ * @package GearsIRCd
+ * @author Weidi Zhang <weidiz999@yahoo.com>
+ * @copyright 2014 Weidi Zhang
+ * @license http://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+ */
+
 namespace GearsIRCd;
 
 class Commands
@@ -62,6 +69,10 @@ class Commands
 				
 			case "mode":
 				$this->RespondMode($user, $recvArgs);
+				break;
+				
+			case "kick":
+				$this->RespondKick($user, $line, $recvArgs);
 				break;
 				
 			default:
@@ -751,6 +762,97 @@ class Commands
 		}
 		else {
 			$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " MODE :Not enough parameters");
+		}
+	}
+	
+	public function RespondKick($user, $line, $args) {
+		if (isset($args[2])) {
+			$channel = $args[1];
+			$kickNick = $args[2];
+			$kickReason = $user->Nick();
+			if (strpos($line, ":") !== false) {
+				$kickReason = substr($line, strpos($line, ":") + 1);
+				if (empty(trim($kickReason))) {
+					$kickReason = $user->Nick();
+				}
+			}
+			
+			if (substr($channel, 0, 1) == "#") {
+				$channelExists = false;
+				$userExistsChannel = false;
+				$chanName = "";
+						
+				foreach ($this->allChannels as $chan) {
+					if (strtolower($chan->Name()) === strtolower($channel)) {
+						$channelExists = true;
+						$chanName = $chan->Name();
+						
+						foreach ($chan->users as $cUser) {
+							if (strtolower($kickNick) === strtolower($cUser->Nick())) {
+								$userExistsChannel = true;
+								if ($chan->IsHalfOpOrAbove($user)) {
+									if (($chan->HalfopMode($user) && !$chan->IsOpOrAbove($user) && $chan->IsHalfOpOrAbove($cUser)) || ($chan->OperatorMode($user) && !$chan->AdminMode($user) && !$chan->OwnerMode($user) && ($chan->AdminMode($cUser) || $chan->OwnerMode($cUser))) || ($chan->AdminMode($user) && !$chan->OwnerMode($user) && $chan->OwnerMode($cUser))) {
+										$userModeToStr = "";
+										if ($chan->OwnerMode($cUser)) {
+											$userModeToStr = "channel owner";
+										}
+										elseif ($chan->AdminMode($cUser)) {
+											$userModeToStr = "channel admin";
+										}
+										elseif ($chan->OperatorMode($cUser)) {
+											$userModeToStr = "channel operator";
+										}
+										elseif ($chan->HalfopMode($cUser)) {
+											$userModeToStr = "halfop";
+										}
+										$this->SocketHandler->sendData($user->Socket(), "972 " . $user->Nick() . " KICK :" . $cUser->Nick() . " is a " . $userModeToStr);
+									}
+									else {										
+										foreach ($chan->users as $chanUser) {
+											$this->SocketHandler->sendRaw($chanUser->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($user) . " KICK " . $chanName . " " . $cUser->Nick() . " :" . $kickReason);
+										}
+										$chan->RemoveUser($cUser);
+									}
+								}
+								else {
+									$this->SocketHandler->sendData($user->Socket(), "482" . $user->Nick() . " " . $chan->Name() . " :You're not channel operator");
+								}								
+								
+								break;
+							}
+						}
+						
+						break;
+					}
+				}
+				
+				if (!$channelExists) {
+					$this->SocketHandler->sendData($user->Socket(), "403" . $user->Nick() . " " . $channel . " :No such channel");
+				}
+				elseif (!$userExistsChannel) {
+					$userExists = false;
+					$userNick = $kickNick;
+					foreach ($this->allUsers as $servUser) {
+						if (strtolower($servUser->Nick()) === strtolower($kickNick)) {
+							$userExists = true;
+							$userNick = $servUser->Nick();
+							break;
+						}
+					}
+					if ($userExists) {
+						$this->SocketHandler->sendData($user->Socket(), "441" . $user->Nick() . " " . $userNick . " " . $chanName . " :They aren't on that channel");
+					}
+					else {
+						$this->SocketHandler->sendData($user->Socket(), "401" . $user->Nick() . " " . $userNick . " :No such nick/channel");
+					}
+				}
+			}
+			else {
+				$this->SocketHandler->sendData($user->Socket(), "403" . $user->Nick() . " " . $channel . " :No such channel");
+			}
+		}
+		else {
+			$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " KICK :Not enough parameters");
 		}
 	}
 }
