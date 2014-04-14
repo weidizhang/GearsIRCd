@@ -27,6 +27,14 @@ class Commands
 				$this->RespondUser($user, $line, $recvArgs);
 				break;
 				
+			case "lusers":
+				$this->RespondLusers($user);
+				break;
+				
+			case "version":
+				$this->RespondVersion($user);
+				break;
+				
 			case "motd":
 				$this->RespondMotd($user);
 				break;
@@ -128,24 +136,48 @@ class Commands
 				array("001", ":Welcome to the " . $this->name . " IRC Network " . $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName),
 				array("002", ":Your host is " . $this->addr . " running version " . $this->ircdVer),
 				array("003", ":This server was created " . $timeCreated),
-				array("004", ":" . $this->addr . " " . $this->ircdVer . "  iowghraAsORTVSxNCWqBzvdHtGp lvhopsmntikrRcaqOALQbSeIKVfMCuzNTGjZ"),
-				array("005", "UHNAMES NAMESX SAFELIST HCN MAXCHANNELS=" . $this->maxChans . " CHANLIMIT=#:" . $this->maxChans . " MAXLIST=b:60,e:60,I:60 NICKLEN=30 CHANNELLEN=32 TOPICLEN=307 KICKLEN=307 AWAYLEN=307 MAXTARGETS=20 :are supported by this server"),
-				array("005", "WALLCHOPS WATCH=128 WATCHOPTS=A SILENCE=15 MODES=12 CHANTYPES=# PREFIX=(qaohv)~&@%+ CHANMODES=beI,kfL,lj,psmntirRcOAQKVCuzNSMTGZ NETWORK=" . $this->name . " CASEMAPPING=ascii EXTBAN=~,qjncrRT ELIST=MNUCT STATUSMSG=~&@%+ :are supported by this server"),
-				array("005", "EXCEPTS INVEX CMDS=KNOCK,MAP,DCCALLOW,USERIP :are supported by this server"),
-				array("251", ":There are " . count($this->allUsers) . " users and " . count($this->allUsers) . " invisible on 1 servers"),
-				array("252", $operCount . " :operator(s) online"),
-				array("254", count($this->allChannels) . " :channels formed"),
-				array("255", ":I have " . count($this->allUsers) . " clients and 0 servers"),
-				array("265", ":Current Local Users: " . count($this->allUsers) . " Max: " . $this->maxUsers),
-				array("265", ":Current Global Users: " . count($this->allUsers) . " Max: " . $this->maxUsers)
+				array("004", ":" . $this->addr . " " . $this->ircdVer . " iowghraAsORTVSxNCWqBzvdHtGp lvhopsmntikrRcaqOALQbSeIKVfMCuzNTGjZ")
 			);
 			
 			foreach ($sendArray as $msgArgs) {
 				$this->SocketHandler->sendData($user->Socket(), $msgArgs[0] . " " . $user->Nick() . " " . $msgArgs[1]);
 			}
+			$this->RespondVersion($user, false);
+			$this->RespondLusers($user);
 			$this->RespondMotd($user);
 			
 			$this->Services->OperServ->RespondClientJoin($this->allUsers, $user, $this->port);
+		}
+	}
+	
+	public function RespondLusers($user) {
+		$sendArray = array(
+			array("251", ":There are " . count($this->allUsers) . " users and " . count($this->allUsers) . " invisible on 1 servers"),
+			array("252", $operCount . " :operator(s) online"),
+			array("254", count($this->allChannels) . " :channels formed"),
+			array("255", ":I have " . count($this->allUsers) . " clients and 0 servers"),
+			array("265", ":Current Local Users: " . count($this->allUsers) . " Max: " . $this->maxUsers),
+			array("265", ":Current Global Users: " . count($this->allUsers) . " Max: " . $this->maxUsers)
+		);
+		
+		foreach ($sendArray as $msgArgs) {
+			$this->SocketHandler->sendData($user->Socket(), $msgArgs[0] . " " . $user->Nick() . " " . $msgArgs[1]);
+		}
+	}
+	
+	public function RespondVersion($user, $userTriggered = true) {
+		$sendArray = array(
+			array("005", "CMDS=KNOCK,MAP,DCCALLOW,USERIP UHNAMES NAMESX SAFELIST HCN MAXCHANNELS=" . $this->maxChans . " CHANLIMIT=#:" . $this->maxChans . " MAXLIST=b:60,e:60,I:60 NICKLEN=30 CHANNELLEN=32 TOPICLEN=307 KICKLEN=307 AWAYLEN=307 MAXTARGETS=20 :are supported by this server"),
+			array("005", "WALLCHOPS WATCH=128 WATCHOPTS=A SILENCE=15 MODES=12 CHANTYPES=# PREFIX=(qaohv)~&@%+ CHANMODES=beI,kfL,lj,psmntirRcOAQKVCuzNSMTGZ NETWORK=" . $this->name . " CASEMAPPING=ascii EXTBAN=~,qjncrRT ELIST=MNUCT STATUSMSG=~&@%+ :are supported by this server"),
+			array("005", "EXCEPTS INVEX CMDS=KNOCK,MAP,DCCALLOW,USERIP :are supported by this server"),		
+		);
+		
+		if ($userTriggered) {
+			$this->SocketHandler->sendData($user->Socket(), "351 " . $user->Nick() . " " . $this->ircdVer . ". " . $this->addr . " :Fin6XeOoEM3 [*=2309]");
+		}
+		
+		foreach ($sendArray as $msgArgs) {
+			$this->SocketHandler->sendData($user->Socket(), $msgArgs[0] . " " . $user->Nick() . " " . $msgArgs[1]);
 		}
 	}
 	

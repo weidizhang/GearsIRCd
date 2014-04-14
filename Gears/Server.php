@@ -18,7 +18,7 @@ class Server extends Commands
 	protected $packetLen = 512;
 	protected $prefix = "irc";
 	protected $maxChans = 25;	
-	protected $ircdVer = "GearsIRCd Alpha";	
+	protected $ircdVer = "GearsIRCd-Alpha";	
 	
 	private $servSocket;
 	private $uniqCount = 0;

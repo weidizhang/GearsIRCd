@@ -57,8 +57,8 @@ class Channel
 	
 	public function Topic($new = "", $user = null) {
 		if ($user != null) {
-			if (strlen($new) > 300) {
-				$new = substr($new, 0, 300);
+			if (strlen($new) > 307) {
+				$new = substr($new, 0, 307);
 			}
 			$this->topic = $new;
 			$this->topicTime = time();
