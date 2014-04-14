@@ -167,7 +167,7 @@ class Commands
 	
 	public function RespondVersion($user, $userTriggered = true) {
 		$sendArray = array(
-			array("005", "CMDS=KNOCK,MAP,DCCALLOW,USERIP UHNAMES NAMESX SAFELIST HCN MAXCHANNELS=" . $this->maxChans . " CHANLIMIT=#:" . $this->maxChans . " MAXLIST=b:60,e:60,I:60 NICKLEN=30 CHANNELLEN=32 TOPICLEN=307 KICKLEN=307 AWAYLEN=307 MAXTARGETS=20 :are supported by this server"),
+			array("005", "UHNAMES NAMESX SAFELIST HCN MAXCHANNELS=" . $this->maxChans . " CHANLIMIT=#:" . $this->maxChans . " MAXLIST=b:60,e:60,I:60 NICKLEN=30 CHANNELLEN=32 TOPICLEN=307 KICKLEN=307 AWAYLEN=307 MAXTARGETS=20 :are supported by this server"),
 			array("005", "WALLCHOPS WATCH=128 WATCHOPTS=A SILENCE=15 MODES=12 CHANTYPES=# PREFIX=(qaohv)~&@%+ CHANMODES=beI,kfL,lj,psmntirRcOAQKVCuzNSMTGZ NETWORK=" . $this->name . " CASEMAPPING=ascii EXTBAN=~,qjncrRT ELIST=MNUCT STATUSMSG=~&@%+ :are supported by this server"),
 			array("005", "EXCEPTS INVEX CMDS=KNOCK,MAP,DCCALLOW,USERIP :are supported by this server"),		
 		);
@@ -425,12 +425,9 @@ class Commands
 						// to do: implement when we code services
 					}
 					elseif (strtolower($chanTo) == "chanserv") {
-						// to do: implement when we code services
+						$this->Services->ChanServ->HandleCommand($user, $line, $msg);
 					}
 					elseif (strtolower($chanTo) == "operserv") {
-						// to do: implement when we code services
-					}
-					elseif (strtolower($chanTo) == "botserv") {
 						// to do: implement when we code services
 					}
 					else {

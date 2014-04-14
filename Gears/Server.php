@@ -42,7 +42,7 @@ class Server extends Commands
 		$this->maxChans = $servSettings["MaxChans"];
 		
 		$this->SocketHandler = new \GearsIRCd\Sockets($this->addr);
-		$this->reservedNicks = array("nickserv", "chanserv", "botserv", "operserv");
+		$this->reservedNicks = array("nickserv", "chanserv", "operserv");
 		
 		$this->Services = new \GearsIRCd\Services($this->SocketHandler, $servSettings["ServicesAddress"]);
 	}

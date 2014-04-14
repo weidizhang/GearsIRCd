@@ -13,10 +13,10 @@ class Services
 	public $OperServ;
 	public $NickServ;
 	public $ChanServ;
-	public $BotServ;
 	
 	public function __construct($sh, $servicesAddr) {
 		$this->OperServ = new \GearsIRCd\OperServ($sh, $servicesAddr);
+		$this->ChanServ = new \GearsIRCd\ChanServ($sh, $servicesAddr);
 	}
 }
 ?>
