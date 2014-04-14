@@ -50,7 +50,7 @@ class Server extends Commands
 	public function startServer() {
 		$this->servSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 		socket_bind($this->servSocket, "0.0.0.0", $this->port);
-		socket_listen($this->servSocket, $this->maxUsers);
+		socket_listen($this->servSocket);
 		socket_set_nonblock($this->servSocket);
 		
 		if (!file_exists("createdstamp-ircd")) {
@@ -75,6 +75,7 @@ class Server extends Commands
 	private function acceptConnections() {
 		$incomingUsr = @socket_accept($this->servSocket);
 		if ($incomingUsr) {
+			socket_set_nonblock($incomingUsr);
 			$this->uniqCount++;
 			
 			$this->SocketHandler->sendData($incomingUsr, "NOTICE AUTH :*** Looking up your hostname...");

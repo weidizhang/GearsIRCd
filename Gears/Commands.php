@@ -125,12 +125,12 @@ class Commands
 			}
 			
 			$sendArray = array(
-				array("001", ":Welcome to the " . $this->name . " IRC Network " . $user->Nick() . "!" . $user->Ident() . "@" . $user->Hostmask()),
+				array("001", ":Welcome to the " . $this->name . " IRC Network " . $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName),
 				array("002", ":Your host is " . $this->addr . " running version " . $this->ircdVer),
 				array("003", ":This server was created " . $timeCreated),
 				array("004", ":" . $this->addr . " " . $this->ircdVer . "  iowghraAsORTVSxNCWqBzvdHtGp lvhopsmntikrRcaqOALQbSeIKVfMCuzNTGjZ"),
 				array("005", "UHNAMES NAMESX SAFELIST HCN MAXCHANNELS=" . $this->maxChans . " CHANLIMIT=#:" . $this->maxChans . " MAXLIST=b:60,e:60,I:60 NICKLEN=30 CHANNELLEN=32 TOPICLEN=307 KICKLEN=307 AWAYLEN=307 MAXTARGETS=20 :are supported by this server"),
-				array("005", "WALLCHOPS WATCH=128 WATCHOPTS=A SILENCE=15 MODES=12 CHANTYPES=# PREFIX=(qaohv)~&@%+ CHANMODES=beI,kfL,lj,psmntirRcOAQKVCuzNSMTGZ NETWORK=" . $ircSettings["name"] . " CASEMAPPING=ascii EXTBAN=~,qjncrRT ELIST=MNUCT STATUSMSG=~&@%+ :are supported by this server"),
+				array("005", "WALLCHOPS WATCH=128 WATCHOPTS=A SILENCE=15 MODES=12 CHANTYPES=# PREFIX=(qaohv)~&@%+ CHANMODES=beI,kfL,lj,psmntirRcOAQKVCuzNSMTGZ NETWORK=" . $this->name . " CASEMAPPING=ascii EXTBAN=~,qjncrRT ELIST=MNUCT STATUSMSG=~&@%+ :are supported by this server"),
 				array("005", "EXCEPTS INVEX CMDS=KNOCK,MAP,DCCALLOW,USERIP :are supported by this server"),
 				array("251", ":There are " . count($this->allUsers) . " users and " . count($this->allUsers) . " invisible on 1 servers"),
 				array("252", $operCount . " :operator(s) online"),
@@ -772,7 +772,8 @@ class Commands
 			$kickReason = $user->Nick();
 			if (strpos($line, ":") !== false) {
 				$kickReason = substr($line, strpos($line, ":") + 1);
-				if (empty(trim($kickReason))) {
+				$tmpKickReason = trim($kickReason);
+				if (empty($tmpKickReason)) {
 					$kickReason = $user->Nick();
 				}
 			}

@@ -53,7 +53,7 @@ class Utilities
 				$makeUsingIP = false;
 				$hashedIP = strtoupper(md5($hostArgs[0]));
 				unset($hostArgs[0]);
-				return $prefix . "-". $hashedIP . substr($hashedIP, 5, 8) . implode(".", $hostArgs);
+				return $prefix . "-". substr($hashedIP, 5, 8) . "." . implode(".", $hostArgs);
 			}
 			else {
 				$makeUsingIP = true;
