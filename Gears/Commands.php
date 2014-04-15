@@ -422,7 +422,7 @@ class Commands
 				}
 				else {
 					if (strtolower($chanTo) == "nickserv") {
-						// to do: implement when we code services
+						$this->Services->NickServ->HandleCommand($user, $line, $msg);
 					}
 					elseif (strtolower($chanTo) == "chanserv") {
 						$this->Services->ChanServ->HandleCommand($user, $line, $msg);

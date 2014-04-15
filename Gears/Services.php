@@ -17,6 +17,7 @@ class Services
 	public function __construct($sh, $servicesAddr) {
 		$this->OperServ = new \GearsIRCd\OperServ($sh, $servicesAddr);
 		$this->ChanServ = new \GearsIRCd\ChanServ($sh, $servicesAddr);
+		$this->NickServ = new \GearsIRCd\NickServ($sh, $servicesAddr);
 	}
 }
 ?>

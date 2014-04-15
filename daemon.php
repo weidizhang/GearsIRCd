@@ -25,7 +25,7 @@ if (file_exists("./gears.json")) {
 	$ircServer->startServer();
 	while (true) {
 		$ircServer->listenOnce();
-		usleep(200000); // so the CPU load doesn't go (too) high
+		usleep(10000); // so the CPU load doesn't go (too) high
 	}	
 }
 else {
