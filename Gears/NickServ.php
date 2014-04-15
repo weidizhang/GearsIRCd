@@ -11,11 +11,13 @@ namespace GearsIRCd;
 class NickServ
 {
 	private $SocketHandler;
-	
+	private $Database;
 	private $fakeUser;
 	
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
+		$this->Database = new \GearsIRCd\Database("./Database/NickServ.db");
+		$this->Database->Query("CREATE TABLE IF NOT EXISTS Registered (Nick TEXT, Password TEXT, TimeCreated INTEGER);");
 		
 		$this->fakeUser = new \GearsIRCd\User(false, -1, "127.0.0.1", "localhost");
 		$this->fakeUser->Operator(true);
