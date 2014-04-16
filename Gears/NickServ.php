@@ -13,11 +13,11 @@ class NickServ
 	private $SocketHandler;
 	private $Database;
 	private $fakeUser;
-	
+	// To do list: Finish commands, on nick change hook (incl. on server connect), kill after 60s unidentified.
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
 		$this->Database = new \GearsIRCd\Database("./Database/NickServ.db");
-		$this->Database->Query("CREATE TABLE IF NOT EXISTS Registered (Nick TEXT, Password TEXT, TimeCreated INTEGER);");
+		$this->Database->Query("CREATE TABLE IF NOT EXISTS Registered (Nick TEXT, Password TEXT, Email TEXT, IPAddress TEXT, TimeCreated INTEGER);");
 		
 		$this->fakeUser = new \GearsIRCd\User(false, -1, "127.0.0.1", "localhost");
 		$this->fakeUser->Operator(true);
@@ -34,6 +34,10 @@ class NickServ
 		switch($cmdRecv) {
 			case "help":
 				$this->RespondHelp($user, $msgArgs);
+				break;
+				
+			case "register":
+				$this->RespondRegister($user, $msgArgs);
 				break;
 				
 			default:
@@ -81,6 +85,48 @@ class NickServ
 		}
 		else {
 			// specific help for commands
+		}
+	}
+	
+	public function RespondRegister($user, $args) {
+		if (isset($args[2])) {
+			$password = $args[1];
+			$email = $args[2];
+			
+			if (strlen($password) < 5) {
+				$this->NoticeUser($user, "Please try again with a more obscure password. It must be at least five characters in length.");
+			}
+			elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+				$this->NoticeUser($user, $email . " is not a valid e-mail address.");
+			}
+			else {
+				$checkExisting = $this->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user;", array(":user" => $user->Nick()));
+				if (count($checkExisting) > 0) {
+					$this->NoticeUser($user, "Nickname " . $user->Nick() . " is already registered!");
+				}
+				else {
+					$registerQuery = $this->Database->Query("INSERT INTO `Registered` VALUES(:user, :pass, :email, :ip, :time);", array(
+						":user" => $user->Nick(),
+						":pass" => sha1($password),
+						":email" => $email,
+						":ip" => $user->ipAddr,
+						":time" => time()
+					));
+					
+					if ($registerQuery) {
+						$user->isRegistered = true;
+						$user->isLoggedIn = true;
+						$this->NoticeUser($user, "Nickname " . $user->Nick() . " registered.");
+					}
+					else {
+						$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
+					}
+				}
+			}
+		}
+		else {
+			$this->NoticeUser($user, "Syntax: REGISTER password email");
+			$this->NoticeUser($user, "/msg NickServ HELP REGISTER for more information.");
 		}
 	}
 	

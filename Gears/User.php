@@ -18,8 +18,12 @@ class User
 	
 	public $failedOperAttempts = 0;
 	
-	private $ipAddr;
+	public $ipAddr;
 	public $hostName;
+	
+	public $isRegistered = false;
+	public $isLoggedIn = false;
+	
 	private $hostMask;
 	
 	private $ping;
