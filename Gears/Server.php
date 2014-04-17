@@ -70,6 +70,7 @@ class Server extends Commands
 	public function listenOnce() {
 		$this->acceptConnections();
 		$this->readUserData();
+		$this->runServices();
 	}
 	
 	private function acceptConnections() {
@@ -104,6 +105,12 @@ class Server extends Commands
 					$this->HandleCommand($User, $UsrIndex, $readLine);
 				}
 			}
+		}
+	}
+	
+	private function runServices() {
+		foreach ($this->Services->NickServ->unidentifiedUsers as $userIndex => $uUser) {
+			
 		}
 	}
 }

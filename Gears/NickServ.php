@@ -13,7 +13,10 @@ class NickServ
 	private $SocketHandler;
 	private $Database;
 	private $fakeUser;
-	// To do list: Finish commands, on nick change hook (incl. on server connect), kill after 60s unidentified.
+	
+	public $unidentifiedUsers = array();
+	
+	// To do list: Finish commands, finish on nick change hook (incl. on server connect), change nick to GuestXXXXX after 60s unidentified.
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
 		$this->Database = new \GearsIRCd\Database("./Database/NickServ.db");
@@ -40,13 +43,17 @@ class NickServ
 				$this->RespondRegister($user, $msgArgs);
 				break;
 				
+			case "identify":
+				$this->RespondIdentify($user, $msgArgs);
+				break;
+				
 			default:
 				$this->RespondUnknownCmd($user, $msgArgs);
 				break;
 		}
 	}
 	
-	private function NoticeUser($user, $msg) {
+	public function NoticeUser($user, $msg) {
 		$this->SocketHandler->sendRaw($user->Socket(), ":" . \GearsIRCd\Utilities::UserToFullHostmask($this->AsUser()) . " NOTICE " . $user->Nick() . " :" . $msg);
 	}
 	
@@ -93,34 +100,30 @@ class NickServ
 			$password = $args[1];
 			$email = $args[2];
 			
-			if (strlen($password) < 5) {
+			if ($this->IsRegistered($user)) {
+				$this->NoticeUser($user, "Nickname " . $user->Nick() . " is already registered!");
+			}
+			elseif (strlen($password) < 5) {
 				$this->NoticeUser($user, "Please try again with a more obscure password. It must be at least five characters in length.");
 			}
 			elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 				$this->NoticeUser($user, $email . " is not a valid e-mail address.");
 			}
 			else {
-				$checkExisting = $this->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user;", array(":user" => $user->Nick()));
-				if (count($checkExisting) > 0) {
-					$this->NoticeUser($user, "Nickname " . $user->Nick() . " is already registered!");
+				$registerQuery = $this->Database->Query("INSERT INTO `Registered` VALUES(:user, :pass, :email, :ip, :time);", array(
+					":user" => $user->Nick(),
+					":pass" => sha1($password),
+					":email" => $email,
+					":ip" => $user->ipAddr,
+					":time" => time()
+				));
+				
+				if ($registerQuery) {
+					$user->isLoggedIn = true;
+					$this->NoticeUser($user, "Nickname " . $user->Nick() . " registered.");
 				}
 				else {
-					$registerQuery = $this->Database->Query("INSERT INTO `Registered` VALUES(:user, :pass, :email, :ip, :time);", array(
-						":user" => $user->Nick(),
-						":pass" => sha1($password),
-						":email" => $email,
-						":ip" => $user->ipAddr,
-						":time" => time()
-					));
-					
-					if ($registerQuery) {
-						$user->isRegistered = true;
-						$user->isLoggedIn = true;
-						$this->NoticeUser($user, "Nickname " . $user->Nick() . " registered.");
-					}
-					else {
-						$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
-					}
+					$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
 				}
 			}
 		}
@@ -130,8 +133,45 @@ class NickServ
 		}
 	}
 	
+	public function RespondIdentify($user, $args) {
+		if (isset($args[1])) {
+			$password = sha1($args[1]);
+			
+			if ($this->IsRegistered($user)) {
+				if ($user->isLoggedIn) {
+					$this->NoticeUser($user, "You are already identified.");
+				}
+				else {
+					$loginQuery = $this->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user AND `Password`=:pass;", array(
+						":user" => $user->Nick(),
+						":pass" => $password
+					));
+					if (count($loginQuery) > 0) {
+						$user->isLoggedIn = true;
+						$this->NoticeUser($user, "Password accepted - you are now recognized.");
+					}
+					else {
+						$this->NoticeUser($user, "Password incorrect.");
+					}
+				}
+			}
+			else {
+				$this->NoticeUser($user, "Your nick isn't registered.");
+			}
+		}
+		else {
+			$this->NoticeUser($user, "Syntax: IDENTIFY password");
+			$this->NoticeUser($user, "/msg NickServ HELP IDENTIFY for more information.");
+		}
+	}
+	
 	public function RespondUnknownCmd($user, $args) {
 		$this->NoticeUser($user, "Unknown command " . $args[0] . ". \"/msg NickServ HELP\" for help.");
+	}
+	
+	public function IsRegistered($user) {
+		$checkExisting = $this->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user;", array(":user" => $user->Nick()));
+		return (count($checkExisting) > 0);
 	}
 	
 	public function AsUser() {

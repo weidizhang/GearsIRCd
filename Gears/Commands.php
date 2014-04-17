@@ -98,6 +98,7 @@ class Commands
 	
 	public function RespondNick($user, $line, $args) {
 		if (isset($args[1])) {
+			$oldNick = $user->Nick();
 			$newNick = trim(ltrim($args[1], ":"));
 			$changeNick = $user->Nick($newNick, $this->reservedNicks, $this->allUsers);
 			if (!$changeNick) {
@@ -112,6 +113,20 @@ class Commands
 					$errorMsg = "432 " . $newNick . " :Erroneous Nickname: Reserved for services";
 				}
 				$this->SocketHandler->sendData($user->Socket(), $errorMsg);
+			}
+			else {
+				if (($this->Services->NickServ->IsRegistered($user)) && ($oldNick != null) && (strtolower($oldNick) !== strtolower($newNick))) {
+					$toSend = array(
+						"This nickname is registered and protected. If it is your",
+						"nick, type /msg NickServ IDENTIFY password. Otherwise,",
+						"please choose a different nick.",
+						"If you do not change within one minute, I will change your nick."
+					);
+					foreach ($toSend as $msg) {
+						$this->Services->NickServ->NoticeUser($user, $msg);
+					}
+					$this->Services->NickServ->unidentifiedUsers[] = array($user, time());
+				}
 			}
 		}
 	}
@@ -147,6 +162,19 @@ class Commands
 			$this->RespondMotd($user);
 			
 			$this->Services->OperServ->RespondClientJoin($this->allUsers, $user, $this->port);
+			
+			if ($this->Services->NickServ->IsRegistered($user)) {
+				$toSend = array(
+					"This nickname is registered and protected. If it is your",
+					"nick, type /msg NickServ IDENTIFY password. Otherwise,",
+					"please choose a different nick.",
+					"If you do not change within one minute, I will change your nick."
+				);
+				foreach ($toSend as $msg) {
+					$this->Services->NickServ->NoticeUser($user, $msg);
+				}
+				$this->Services->NickServ->unidentifiedUsers[] = array($user, time());
+			}
 		}
 	}
 	
