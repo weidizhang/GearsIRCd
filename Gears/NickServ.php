@@ -47,6 +47,10 @@ class NickServ
 				$this->RespondIdentify($user, $msgArgs);
 				break;
 				
+			case "logout":
+				$this->RespondLogout($user, $msgArgs);
+				break;
+				
 			default:
 				$this->RespondUnknownCmd($user, $msgArgs);
 				break;
@@ -149,6 +153,13 @@ class NickServ
 					if (count($loginQuery) > 0) {
 						$user->isLoggedIn = true;
 						$this->NoticeUser($user, "Password accepted - you are now recognized.");
+						
+						foreach ($this->unidentifiedUsers as $userIndex => $uUser) {
+							if ($uUser[0] === $user) {
+								unset($this->unidentifiedUsers[$userIndex]);
+								break;
+							}
+						}
 					}
 					else {
 						$this->NoticeUser($user, "Password incorrect.");
@@ -162,6 +173,23 @@ class NickServ
 		else {
 			$this->NoticeUser($user, "Syntax: IDENTIFY password");
 			$this->NoticeUser($user, "/msg NickServ HELP IDENTIFY for more information.");
+		}
+	}
+	
+	public function RespondLogout($user, $args) {
+		if (!isset($args[1])) {
+			if ($user->isLoggedIn) {
+				$user->isLoggedIn = false;
+				$this->NoticeUser($user, "Your nick has been logged out.");
+			}
+			else {
+				$this->NoticeUser($user, "Password authentication required for that command.");
+				$this->NoticeUser($user, "Retry after typing /msg NickServ IDENTIFY password.");
+			}
+		}
+		else {
+			$this->NoticeUser($user, "Syntax: LOGOUT");
+			$this->NoticeUser($user, "/msg NickServ HELP LOGOUT for more information.");
 		}
 	}
 	

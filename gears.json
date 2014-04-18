@@ -8,7 +8,8 @@
         "MaxUsers": 25,
         "MaxPacketLen": 512,
         "HostPrefix": "irc",
-        "MaxChans": 20
+        "MaxChans": 20,
+		"GuestPrefix": "Guest"
     },
     "Operators": [
         {

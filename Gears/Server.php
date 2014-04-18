@@ -19,6 +19,7 @@ class Server extends Commands
 	protected $prefix = "irc";
 	protected $maxChans = 25;	
 	protected $ircdVer = "GearsIRCd-Alpha";	
+	protected $guestPrefix = "Guest";
 	
 	private $servSocket;
 	private $uniqCount = 0;
@@ -40,6 +41,7 @@ class Server extends Commands
 		$this->packetLen = $servSettings["MaxPacketLen"];
 		$this->prefix = $servSettings["HostPrefix"];
 		$this->maxChans = $servSettings["MaxChans"];
+		$this->guestPrefix = $servSettings["GuestPrefix"];
 		
 		$this->SocketHandler = new \GearsIRCd\Sockets($this->addr);
 		$this->reservedNicks = array("nickserv", "chanserv", "operserv");
@@ -110,7 +112,13 @@ class Server extends Commands
 	
 	private function runServices() {
 		foreach ($this->Services->NickServ->unidentifiedUsers as $userIndex => $uUser) {
-			
+			if ((time() - $uUser[1]) >= 60) {
+				$newNick = $this->guestPrefix . rand(100, 99999);
+				$this->Services->NickServ->NoticeUser($uUser[0], "Your nickname is now being changed to " . $newNick);
+				$this->RespondNick($uUser[0], null, array("NICK", ":" . $newNick));
+				unset($this->Services->NickServ->unidentifiedUsers[$userIndex]);
+				break;
+			}
 		}
 	}
 }

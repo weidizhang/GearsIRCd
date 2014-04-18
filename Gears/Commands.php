@@ -99,9 +99,10 @@ class Commands
 	public function RespondNick($user, $line, $args) {
 		if (isset($args[1])) {
 			$oldNick = $user->Nick();
+			$oldHostmask = \GearsIRCd\Utilities::UserToFullHostmask($user);
 			$newNick = trim(ltrim($args[1], ":"));
 			$changeNick = $user->Nick($newNick, $this->reservedNicks, $this->allUsers);
-			if (!$changeNick) {
+			if ($changeNick !== true) {
 				$errorMsg = "";
 				if ($changeNick === 10) {
 					$errorMsg = "432 " . $newNick . " :Erroneous Nickname";
@@ -115,6 +116,22 @@ class Commands
 				$this->SocketHandler->sendData($user->Socket(), $errorMsg);
 			}
 			else {
+				if ($oldNick != null) {
+					$toSend = ":" . $oldHostmask . " NICK :" . $newNick;
+					$this->SocketHandler->sendRaw($user->Socket(), $toSend);
+					$sentTo = array($user);
+					foreach ($this->allChannels as $chan) {
+						if ($chan->IsUserInChannel($user)) {
+							foreach ($chan->users as $cUser) {
+								if (!in_array($cUser, $sentTo)) {
+									$this->SocketHandler->sendRaw($cUser->Socket(), $toSend);
+									$sentTo[] = $cUser;
+								}
+							}
+						}
+					}
+				}
+			
 				if (($this->Services->NickServ->IsRegistered($user)) && ($oldNick != null) && (strtolower($oldNick) !== strtolower($newNick))) {
 					$toSend = array(
 						"This nickname is registered and protected. If it is your",
