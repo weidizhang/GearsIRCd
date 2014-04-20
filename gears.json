@@ -9,7 +9,7 @@
         "MaxPacketLen": 512,
         "HostPrefix": "irc",
         "MaxChans": 20,
-		"GuestPrefix": "Guest"
+        "GuestPrefix": "Guest"
     },
     "Operators": [
         {

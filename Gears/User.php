@@ -48,7 +48,7 @@ class User
 			$isValid = \GearsIRCd\Utilities::ValidateNick($newValue);
 			
 			foreach ($users as $user) {
-				if (strtolower($user->Nick()) === strtolower($newValue)) {
+				if ((strtolower($user->Nick()) === strtolower($newValue)) && (strtolower($newValue) !== strtolower($user->Nick()))) {
 					return 11;
 				}
 			}

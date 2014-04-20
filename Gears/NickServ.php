@@ -20,7 +20,7 @@ class NickServ
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
 		$this->Database = new \GearsIRCd\Database("./Database/NickServ.db");
-		$this->Database->Query("CREATE TABLE IF NOT EXISTS Registered (Nick TEXT, Password TEXT, Email TEXT, IPAddress TEXT, TimeCreated INTEGER);");
+		$this->Database->Query("CREATE TABLE IF NOT EXISTS Registered (Nick TEXT COLLATE NOCASE, Password TEXT, Email TEXT, IPAddress TEXT, TimeCreated INTEGER);");
 		
 		$this->fakeUser = new \GearsIRCd\User(false, -1, "127.0.0.1", "localhost");
 		$this->fakeUser->Operator(true);
@@ -45,6 +45,10 @@ class NickServ
 				
 			case "identify":
 				$this->RespondIdentify($user, $msgArgs);
+				break;
+				
+			case "drop":
+				$this->RespondDrop($user, $msgArgs);
 				break;
 				
 			case "logout":
@@ -176,15 +180,63 @@ class NickServ
 		}
 	}
 	
-	public function RespondLogout($user, $args) {
-		if (!isset($args[1])) {
-			if ($user->isLoggedIn) {
-				$user->isLoggedIn = false;
-				$this->NoticeUser($user, "Your nick has been logged out.");
+	public function RespondDrop($user, $args) {
+		if (isset($args[1]) && !empty($args[1]) && (strtolower($args[1]) != strtolower($user->Nick()))) {
+			$target = $args[1];
+			if ($user->Operator()) {
+				if ($this->IsRegistered($target, true)) {
+					$dropQuery = $this->Database->Query("DELETE FROM `Registered` WHERE `Nick`=:nick;", array(":nick" => $target));
+					if ($dropQuery) {
+						$this->NoticeUser($user, "Nickname " . $target . " has been dropped.");
+					}
+					else {
+						$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
+					}
+				}
+				else {
+					$this->NoticeUser($user, "Nick " . $target . " isn't registered.");
+				}
 			}
 			else {
-				$this->NoticeUser($user, "Password authentication required for that command.");
-				$this->NoticeUser($user, "Retry after typing /msg NickServ IDENTIFY password.");
+				$this->NoticeUser($user, "Access denied.");
+			}
+		}
+		else {
+			if ($this->IsRegistered($user)) {
+				if ($user->isLoggedIn) {
+					$dropQuery = $this->Database->Query("DELETE FROM `Registered` WHERE `Nick`=:nick;", array(":nick" => $user->Nick()));
+					if ($dropQuery) {
+						$this->NoticeUser($user, "Your nickname has been dropped.");
+					}
+					else {
+						$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
+					}
+				}
+				else {
+					$this->NoticeUser($user, "Password authentication required for that command.");
+					$this->NoticeUser($user, "Retry after typing /msg NickServ IDENTIFY password.");
+				}
+			}
+			else {
+				$this->NoticeUser($user, "Your nick isn't registered.");
+			}
+		}
+	}
+	
+	public function RespondLogout($user, $args) {
+		if (!isset($args[1])) {
+			if ($this->IsRegistered($user)) {
+				if ($user->isLoggedIn) {
+					$user->isLoggedIn = false;
+					$this->NoticeUser($user, "Your nick has been logged out.");
+				}
+				else {
+					$this->NoticeUser($user, "Password authentication required for that command.");
+					$this->NoticeUser($user, "Retry after typing /msg NickServ IDENTIFY password.");
+				}
+			}
+			else {
+				$this->NoticeUser($user, "Your nick isn't registered.");
 			}
 		}
 		else {
@@ -197,8 +249,15 @@ class NickServ
 		$this->NoticeUser($user, "Unknown command " . $args[0] . ". \"/msg NickServ HELP\" for help.");
 	}
 	
-	public function IsRegistered($user) {
-		$checkExisting = $this->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user;", array(":user" => $user->Nick()));
+	public function IsRegistered($user, $nickIsInput = false) {
+		$nick = null;
+		if ($nickIsInput) {
+			$nick = $user;
+		}
+		else {
+			$nick = $user->Nick();
+		}
+		$checkExisting = $this->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user;", array(":user" => $nick));
 		return (count($checkExisting) > 0);
 	}
 	

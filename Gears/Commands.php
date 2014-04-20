@@ -83,6 +83,12 @@ class Commands
 				$this->RespondKick($user, $line, $recvArgs);
 				break;
 				
+			case "ns":
+			case "cs":
+			case "os":
+				$this->RespondServiceAlias($user, $line, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -131,7 +137,11 @@ class Commands
 						}
 					}
 				}
-			
+				
+				if (strtolower($oldNick) !== strtolower($newNick)) {
+					$user->isLoggedIn = false;
+				}
+				
 				if (($this->Services->NickServ->IsRegistered($user)) && ($oldNick != null) && (strtolower($oldNick) !== strtolower($newNick))) {
 					$toSend = array(
 						"This nickname is registered and protected. If it is your",
@@ -928,6 +938,19 @@ class Commands
 		}
 		else {
 			$this->SocketHandler->sendData($user->Socket(), "461 " . $user->Nick() . " KICK :Not enough parameters");
+		}
+	}
+	
+	public function RespondServiceAlias($user, $line, $args) {
+		if (isset($args[1])) {
+			$msg = substr($line, 3);
+			$service = strtr(strtolower($args[0]), array(
+				"ns" => "NickServ",
+				"cs" => "ChanServ",
+				"os" => "OperServ"
+			));
+			$line = "PRIVMSG " . $service . " :" . $msg;
+			$this->Services->$service->HandleCommand($user, $line, $msg);
 		}
 	}
 }

@@ -60,5 +60,9 @@ class OperServ
 		$this->NoticeOperators($all, ":*** Notice -- Received KILL message for " . \GearsIRCd\Utilities::UserToFullHostmask($userKill) . " from " . $user->Nick() . " Path: " . $user->Hostmask() . "!" . $user->Nick() . " (" . $killMsg . ")");
 	}
 	
+	public function HandleCommand($user, $line, $msg) {
+		// To-do.
+	}
+	
 }
 ?>
