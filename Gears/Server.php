@@ -119,6 +119,41 @@ class Server extends Commands
 				unset($this->Services->NickServ->unidentifiedUsers[$userIndex]);
 				break;
 			}
+		}		
+
+		foreach ($this->Services->NickServ->ghostQueue as $userIndex => $gUser) {
+			$foundUser = false;
+			
+			foreach ($this->allUsers as $servUser) {
+				if (strtolower($servUser->Nick()) === strtolower($gUser[1])) {
+					$foundUser = true;
+					
+					if ($this->Services->NickServ->IsRegistered($gUser[1], true)) {
+						$checkQuery = $this->Services->NickServ->Database->QueryAndFetch("SELECT * FROM `Registered` WHERE `Nick`=:user AND `Password`=:pass;", array(
+							":user" => $gUser[1],
+							":pass" => sha1($gUser[2])
+						));
+						
+						if (count($checkQuery) > 0) {
+							$this->RespondKill($this->Services->NickServ->AsUser(), "KILL " . $servUser->Nick() . " :GHOST command used by " . $gUser[0]->Nick(), array(true, $servUser->Nick(), true));
+							$this->Services->NickServ->NoticeUser($gUser[0], "Ghost with your nick has been killed.");
+						}
+						else {
+							$this->Services->NickServ->NoticeUser($gUser[0], "Access denied.");
+						}
+					}
+					else {
+						$this->Services->NickServ->NoticeUser($gUser[0], "Nick " . $gUser[1] . " isn't registered.");
+					}					
+					
+					break;
+				}
+			}
+			
+			if (!$foundUser) {
+				$this->Services->NickServ->NoticeUser($gUser[0], "Nick " . $gUser[1] . " isn't currently in use.");
+			}			
+			unset($this->Services->NickServ->ghostQueue[$userIndex]);
 		}
 	}
 }

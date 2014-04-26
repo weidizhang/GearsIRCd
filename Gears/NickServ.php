@@ -10,13 +10,14 @@ namespace GearsIRCd;
 
 class NickServ
 {
-	private $SocketHandler;
-	private $Database;
+	private $SocketHandler;	
 	private $fakeUser;
 	
-	public $unidentifiedUsers = array();
+	public $Database;
 	
-	// To do list: Finish commands, finish on nick change hook (incl. on server connect), change nick to GuestXXXXX after 60s unidentified.
+	public $unidentifiedUsers = array();
+	public $ghostQueue = array();
+	
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
 		$this->Database = new \GearsIRCd\Database("./Database/NickServ.db");
@@ -47,8 +48,16 @@ class NickServ
 				$this->RespondIdentify($user, $msgArgs);
 				break;
 				
+			case "set":
+				$this->RespondSet($user, $msgArgs);
+				break;
+				
 			case "drop":
 				$this->RespondDrop($user, $msgArgs);
+				break;
+				
+			case "ghost":
+				$this->RespondGhost($user, $msgArgs);
 				break;
 				
 			case "logout":
@@ -111,8 +120,8 @@ class NickServ
 			if ($this->IsRegistered($user)) {
 				$this->NoticeUser($user, "Nickname " . $user->Nick() . " is already registered!");
 			}
-			elseif (strlen($password) < 5) {
-				$this->NoticeUser($user, "Please try again with a more obscure password. It must be at least five characters in length.");
+			elseif ((strlen($password) < 5) || (strpos($password, "\t") !== false) || (strtolower($password) === strtolower($user->Nick()))) {
+				$this->NoticeUser($user, "Please try again with a more obscure password. Passwords should be at least five characters long, should not be something easily guessed (e.g. your nick), and cannot contain the space or tab characters.");
 			}
 			elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 				$this->NoticeUser($user, $email . " is not a valid e-mail address.");
@@ -180,6 +189,70 @@ class NickServ
 		}
 	}
 	
+	public function RespondSet($user, $args) {
+		if (isset($args[2])) {
+			if ($this->IsRegistered($user)) {
+				if ($user->isLoggedIn) {
+					$command = strtolower($args[1]);
+					switch ($command) {
+						case "password":
+							$password = $args[2];
+							if ((strlen($password) < 5) || (strpos($password, "\t") !== false) || (strtolower($password) === strtolower($user->Nick()))) {
+								$this->NoticeUser($user, "Please try again with a more obscure password. Passwords should be at least five characters long, should not be something easily guessed (e.g. your nick), and cannot contain the space or tab characters.");
+							}
+							else {
+								$updateQuery = $this->Database->Query("UPDATE `Registered` SET `Password`=:pass WHERE `Nick`=:user;", array(
+									":pass" => sha1($password),
+									":user" => $user->Nick()
+								));
+								if ($updateQuery) {
+									$this->NoticeUser($user, "Password changed.");
+								}
+								else {
+									$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
+								}
+							}
+							break;
+						
+						case "email":
+							$email = $args[2];
+							if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+								$this->NoticeUser($user, $email . " is not a valid e-mail address.");
+							}
+							else {
+								$updateQuery = $this->Database->Query("UPDATE `Registered` SET `Email`=:email WHERE `Nick`=:user;", array(
+									":email" => $email,
+									":user" => $user->Nick()
+								));
+								if ($updateQuery) {
+									$this->NoticeUser($user, "E-mail address changed to " . $email . ".");
+								}
+								else {
+									$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
+								}
+							}
+							break;
+							
+						default:
+							$this->NoticeUser($user, "Unknown SET option " . $args[1] . ".");
+							break;
+					}
+				}
+				else {
+					$this->NoticeUser($user, "Password authentication required for that command.");
+					$this->NoticeUser($user, "Retry after typing /msg NickServ IDENTIFY password.");
+				}
+			}
+			else {
+				$this->NoticeUser($user, "Your nick isn't registered.");
+			}
+		}
+		else {
+			$this->NoticeUser($user, "Syntax: SET option parameters");
+			$this->NoticeUser($user, "/msg NickServ HELP SET for more information.");
+		}
+	}
+	
 	public function RespondDrop($user, $args) {
 		if (isset($args[1]) && !empty($args[1]) && (strtolower($args[1]) != strtolower($user->Nick()))) {
 			$target = $args[1];
@@ -220,6 +293,24 @@ class NickServ
 			else {
 				$this->NoticeUser($user, "Your nick isn't registered.");
 			}
+		}
+	}
+	
+	public function RespondGhost($user, $args) {
+		if (isset($args[2])) {
+			$nick = $args[1];
+			$password = $args[2];
+			
+			if (strtolower($nick) === strtolower($user->Nick())) {
+				$this->NoticeUser($user, "You can't ghost yourself!");
+			}
+			else {
+				$this->ghostQueue[] = array($user, $nick, $password);
+			}
+		}
+		else {
+			$this->NoticeUser($user, "Syntax: GHOST nickname password");
+			$this->NoticeUser($user, "/msg NickServ HELP GHOST for more information.");
 		}
 	}
 	

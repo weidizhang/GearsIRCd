@@ -166,13 +166,7 @@ class Commands
 			$user->Realname($realName);
 			
 			$createdTS = file_get_contents("createdstamp-ircd");
-			$timeCreated = date("D M d Y", $createdTS) . " at " . date("H:i:s", $createdTS);
-			$operCount = 0;
-			foreach ($this->allUsers as $user) {
-				if ($user->Operator() === true) {
-					$operCount++;
-				}
-			}
+			$timeCreated = date("D M d Y", $createdTS) . " at " . date("H:i:s", $createdTS);			
 			
 			$sendArray = array(
 				array("001", ":Welcome to the " . $this->name . " IRC Network " . $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName),
@@ -206,6 +200,13 @@ class Commands
 	}
 	
 	public function RespondLusers($user) {
+		$operCount = 0;
+		foreach ($this->allUsers as $user) {
+			if ($user->Operator() === true) {
+				$operCount++;
+			}
+		}
+		
 		$sendArray = array(
 			array("251", ":There are " . count($this->allUsers) . " users and " . count($this->allUsers) . " invisible on 1 servers"),
 			array("252", $operCount . " :operator(s) online"),
@@ -577,6 +578,18 @@ class Commands
 		}
 		if (!empty($killMsg)) {
 			$quitMessage = $killMsg;
+		}
+		
+		foreach ($this->Services->NickServ->unidentifiedUsers as $userIndex => $uUser) {
+			if ($uUser[0] === $user) {
+				unset($this->Services->NickServ->unidentifiedUsers[$userIndex]);
+			}
+		}
+		
+		foreach ($this->Services->NickServ->ghostQueue as $userIndex => $gUser) {
+			if (strtolower($gUser[1]) === strtolower($user->Nick())) {
+				unset($this->Services->NickServ->ghostQueue[$userIndex]);
+			}
 		}
 		
 		$sentTo = array($user);
