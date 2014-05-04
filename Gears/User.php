@@ -11,8 +11,7 @@ namespace GearsIRCd;
 class User
 {
 	private $nickName = null;
-	private $ident = null;
-	private $realName = null;
+	private $ident = null;	
 	private $socket;
 	private $isOperator = false;
 	
@@ -20,6 +19,7 @@ class User
 	
 	public $ipAddr;
 	public $hostName;
+	public $realName = null;
 	
 	public $isLoggedIn = false;
 	

@@ -7,6 +7,13 @@
         "MOTD": "Welcome to the GearsIRCd test server. \nEnjoy your stay!",
         "MaxUsers": 25,
         "MaxPacketLen": 512,
+        "MaxConnectionsPerIP": 3,
+        "WhitelistIP": [
+            "207.192.75.252",
+            "64.62.228.82",
+            "78.129.202.38",
+            "109.169.29.95"
+        ],
         "HostPrefix": "irc",
         "MaxChans": 20,
         "GuestPrefix": "Guest"
@@ -21,7 +28,8 @@
     "HelpInformation": {
         "Server": {
             "MaxPacketLen": "Leave it at the default 512 if you don't know what it's for",
-            "MaxChans": "Maximum number of channels a user is allowed to join"
+            "MaxChans": "Maximum number of channels a user is allowed to join",
+            "WhitelistIP": "IPs excluded from the max connections per IP limit. It includes the mibbit IPs by default."
         },
         "Operators": {
             "Password": "Plain text is not supported for security reasons, the example operator's password is 123456",

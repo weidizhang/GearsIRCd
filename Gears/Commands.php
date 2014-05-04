@@ -89,6 +89,10 @@ class Commands
 				$this->RespondServiceAlias($user, $line, $recvArgs);
 				break;
 				
+			case "whois":
+				$this->RespondWhois($user, $recvArgs);
+				break;
+				
 			default:
 				break;
 		}
@@ -160,41 +164,59 @@ class Commands
 	
 	public function RespondUser($user, $line, $args) {
 		if ((count($args) >= 5) && ($user->Nick() != null) && ($user->Ident() == null)) {
-			$ident = $args[1];
-			$realName = ltrim($args[4], ":");
-			$user->Ident($ident);
-			$user->Realname($realName);
-			
-			$createdTS = file_get_contents("createdstamp-ircd");
-			$timeCreated = date("D M d Y", $createdTS) . " at " . date("H:i:s", $createdTS);			
-			
-			$sendArray = array(
-				array("001", ":Welcome to the " . $this->name . " IRC Network " . $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName),
-				array("002", ":Your host is " . $this->addr . " running version " . $this->ircdVer),
-				array("003", ":This server was created " . $timeCreated),
-				array("004", ":" . $this->addr . " " . $this->ircdVer . " iowghraAsORTVSxNCWqBzvdHtGp lvhopsmntikrRcaqOALQbSeIKVfMCuzNTGjZ")
-			);
-			
-			foreach ($sendArray as $msgArgs) {
-				$this->SocketHandler->sendData($user->Socket(), $msgArgs[0] . " " . $user->Nick() . " " . $msgArgs[1]);
+			if (count($this->allUsers) > $this->maxUsers) {
+				$this->SocketHandler->sendRaw($user->Socket(), "ERROR :Closing Link: " . $user->Nick() . "[" . $user->hostName . "] " . $user->Nick() . " (This server is full.)");
+				$this->Services->OperServ->RespondMaxConnections($this->allUsers, $user);
+				socket_close($user->Socket());
 			}
-			$this->RespondVersion($user, false);
-			$this->RespondLusers($user);
-			$this->RespondMotd($user);
-			
-			$this->Services->OperServ->RespondClientJoin($this->allUsers, $user, $this->port);
-			
-			if ($this->Services->NickServ->IsRegistered($user)) {
-				$toSend = array(
-					"This nickname is registered and protected. If it is your",
-					"nick, type /msg NickServ IDENTIFY password. Otherwise,",
-					"please choose a different nick.",
-					"If you do not change within one minute, I will change your nick."
+			else {
+				$ident = $args[1];
+				$realName = ltrim($args[4], ":");
+				$user->Ident($ident);
+				$user->Realname($realName);
+				
+				$createdTS = file_get_contents("createdstamp-ircd");
+				$timeCreated = date("D M d Y", $createdTS) . " at " . date("H:i:s", $createdTS);			
+				
+				$sendArray = array(
+					array("001", ":Welcome to the " . $this->name . " IRC Network " . $user->Nick() . "!" . $user->Ident() . "@" . $user->hostName),
+					array("002", ":Your host is " . $this->addr . " running version " . $this->ircdVer),
+					array("003", ":This server was created " . $timeCreated),
+					array("004", ":" . $this->addr . " " . $this->ircdVer . " iowghraAsORTVSxNCWqBzvdHtGp lvhopsmntikrRcaqOALQbSeIKVfMCuzNTGjZ")
 				);
-				foreach ($toSend as $msg) {
-					$this->Services->NickServ->NoticeUser($user, $msg);
+				
+				foreach ($sendArray as $msgArgs) {
+					$this->SocketHandler->sendData($user->Socket(), $msgArgs[0] . " " . $user->Nick() . " " . $msgArgs[1]);
 				}
-				$this->Services->NickServ->unidentifiedUsers[] = array($user, time());
+				$this->RespondVersion($user, false);
+				$this->RespondLusers($user);
+				$this->RespondMotd($user);
+				
+				$this->Services->OperServ->RespondClientJoin($this->allUsers, $user, $this->port);
+				
+				if ($this->Services->NickServ->IsRegistered($user)) {
+					$toSend = array(
+						"This nickname is registered and protected. If it is your",
+						"nick, type /msg NickServ IDENTIFY password. Otherwise,",
+						"please choose a different nick.",
+						"If you do not change within one minute, I will change your nick."
+					);
+					foreach ($toSend as $msg) {
+						$this->Services->NickServ->NoticeUser($user, $msg);
+					}
+					$this->Services->NickServ->unidentifiedUsers[] = array($user, time());
+				}
+				
+				$ipCount = 0;
+				foreach ($this->allUsers as $servUser) {
+					if ($servUser->ipAddr == $user->ipAddr) {
+						$ipCount++;
+					}
+				}
+				
+				if (($ipCount > $this->maxPerIP) && (!in_array($user->ipAddr, $this->whitelistIPs))) {
+					$this->RespondKill($this->Services->OperServ->AsUser(), "KILL " . $user->Nick() . " :Session limit reached", array(true, $user->Nick(), true));
+				}
 			}
 		}
 	}
@@ -586,12 +608,6 @@ class Commands
 			}
 		}
 		
-		foreach ($this->Services->NickServ->ghostQueue as $userIndex => $gUser) {
-			if (strtolower($gUser[1]) === strtolower($user->Nick())) {
-				unset($this->Services->NickServ->ghostQueue[$userIndex]);
-			}
-		}
-		
 		$sentTo = array($user);
 		foreach ($this->allChannels as $chan) {
 			if ($chan->IsUserInChannel($user)) {
@@ -964,6 +980,75 @@ class Commands
 			));
 			$line = "PRIVMSG " . $service . " :" . $msg;
 			$this->Services->$service->HandleCommand($user, $line, $msg);
+		}
+	}
+	
+	public function RespondWhois($user, $args) {
+		if (isset($args[1])) {
+			$nickname = $args[1];
+			$userFound = false;
+			
+			foreach ($this->allUsers as $servUser) {
+				if (strtolower($servUser->Nick()) === strtolower($nickname)) {
+					$userFound = true;
+					$sendArray = array();
+					$sendArray[] = "311 " . $user->Nick() . " " . $servUser->Nick() . " " . $servUser->Ident() . " " . $servUser->Hostmask() . " * :" . $servUser->realName;
+					
+					if (($servUser === $user) || $user->Operator()) {
+						$sendArray[] = "378 " . $user->Nick() . " " . $servUser->Nick() . " :is connecting from *@" . $servUser->hostName . " " . $servUser->ipAddr;
+					}					
+					
+					if ($servUser->isLoggedIn && $this->Services->NickServ->IsRegistered($servUser)) {
+						$sendArray[] = "307 " . $user->Nick() . " " . $servUser->Nick() . " :is identified for this nick";
+					}
+					
+					$channelsList = "";
+					foreach ($this->allChannels as $chan) {
+						if ($chan->IsUserInChannel($servUser)) {
+							$highestMode = "";
+							if ($chan->OwnerMode($servUser)) {
+								$highestMode = "~";
+							}
+							elseif ($chan->AdminMode($servUser)) {
+								$highestMode = "&";
+							}
+							elseif ($chan->OperatorMode($servUser)) {
+								$highestMode = "@";
+							}
+							elseif ($chan->HalfopMode($servUser)) {
+								$highestMode = "%";
+							}
+							elseif ($chan->VoiceMode($servUser)) {
+								$highestMode = "+";
+							}
+							$channelsList .= $highestMode . $chan->Name() . " ";							
+						}
+					}
+					$channelsList = trim($channelsList);
+					if (!empty($channelsList)) {
+						$sendArray[] = "319 " . $user->Nick() . " " . $servUser->Nick() . " :" . $channelsList;
+					}
+					$sendArray[] = "312 " . $user->Nick() . " " . $servUser->Nick() . " " . $this->addr . " :" . $this->name;
+					if ($servUser->Operator()) {
+						$sendArray[] = "313 " . $user->Nick() . " " . $servUser->Nick() . " :is a Network Administrator";
+					}
+					$sendArray[] = "318 " . $user->Nick() . " " . $servUser->Nick() . " :End of /WHOIS list.";
+					
+					foreach ($sendArray as $toSend) {
+						$this->SocketHandler->sendData($user->Socket(), $toSend);
+					}
+					
+					break;
+				}
+			}
+			
+			if (!$userFound) {
+				$this->SocketHandler->sendData($user->Socket(), "401 " . $user->Nick() . " " . $nickname . " :No such nick/channel");
+				$this->SocketHandler->sendData($user->Socket(), "318 " . $user->Nick() . " " . $nickname . " :End of /WHOIS list.");
+			}
+		}
+		else {
+			$this->SocketHandler->sendData($user->Socket(), "431 " . $user->Nick() . " :No nickname given");
 		}
 	}
 }

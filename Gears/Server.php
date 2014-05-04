@@ -18,6 +18,8 @@ class Server extends Commands
 	protected $packetLen = 512;
 	protected $prefix = "irc";
 	protected $maxChans = 25;	
+	protected $maxPerIP = 3;
+	protected $whitelistIPs = array();
 	protected $ircdVer = "GearsIRCd-Alpha";	
 	protected $guestPrefix = "Guest";
 	
@@ -39,6 +41,8 @@ class Server extends Commands
 		$this->motd = $servSettings["MOTD"];
 		$this->maxUsers = $servSettings["MaxUsers"];
 		$this->packetLen = $servSettings["MaxPacketLen"];
+		$this->maxPerIP = $servSettings["MaxConnectionsPerIP"];
+		$this->whitelistIPs = $servSettings["WhitelistIP"];
 		$this->prefix = $servSettings["HostPrefix"];
 		$this->maxChans = $servSettings["MaxChans"];
 		$this->guestPrefix = $servSettings["GuestPrefix"];

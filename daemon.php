@@ -11,6 +11,10 @@ foreach (glob("./Gears/*.php") as $gearsClass) {
 	require $gearsClass;
 }
 
+if (version_compare(PHP_VERSION, "5.4.0", "<")) {
+	die("PHP 5.4+ is required. You have PHP " . PHP_VERSION . ".");
+}
+
 if (file_exists("./gears.json")) {
 	$getConfig = json_decode(file_get_contents("./gears.json"), true);
 	if ($getConfig === false || !isset($getConfig["Server"]) || !isset($getConfig["Operators"])) {
