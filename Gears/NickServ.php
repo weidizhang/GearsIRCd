@@ -108,7 +108,109 @@ class NickServ
 			}
 		}
 		else {
-			// specific help for commands
+			$helpInfo = array();
+			
+			$cmdHelp = strtolower($args[1]);
+			switch ($cmdHelp) {
+				case "register":
+					$helpInfo = array(
+						"Syntax: REGISTER password email",
+						" ",
+						"Registers your nickname in the NickServ database. It",
+						"gives you access to the SET commands, and prevents",
+						"other users from using your nickname. Make sure you",
+						"choose a password that you will remember. (Note: case",
+						"matters! TEST, Test, test are all different passwords)"
+					);
+					break;
+				
+				case "identify":
+					$helpInfo = array(
+						"Syntax: IDENTIFY password",
+						" ",
+						"Tells NickServ you are really the owner of this",
+						"nickname. Many commands require you to authenticate",
+						"yourself with this command before you use them."
+					);
+					break;
+					
+				case "set":
+					if (isset($args[2])) {
+						$setOption = strtolower($args[2]);
+						switch ($setOption) {
+							case "password":
+								$helpInfo = array(
+									"Syntax: SET PASSWORD new-password",
+									" ",
+									"Changes the password used to identify you as the nick's",
+									"owner."
+								);
+								break;
+								
+							case "email":
+								$helpInfo = array(
+									"Syntax: SET EMAIL address",
+									" ",
+									"Changes the email associated with your nickname."
+								);
+								break;
+								
+							default:	
+								$helpInfo = array(
+									"No help available for set option " . $args[2]
+								);
+								break;
+						}
+					}
+					else {
+						$helpInfo = array(
+							"Syntax: SET option parameters",
+							" ",
+							"Set various nickname options. option can be one of:",
+							"SET PASSWORD Set your nickname password",
+							"SET EMAIL Set your nickname email",
+							"Type /msg NickServ HELP set option for more information",
+							"on a specific option."
+						);
+					}
+					break;
+					
+				case "drop":
+					$helpInfo = array(
+						"Syntax: DROP [nickname]",
+						" ",
+						"Drops the given nick from the database. Once dropped,",
+						"any other user may gain control of this nickname."
+					);
+					break;
+					
+				case "ghost":
+					$helpInfo = array(
+						"Syntax: GHOST nickname password",
+						" ",
+						"The user that is currently holding the nickname will",
+						"be killed."
+					);
+					break;
+					
+				case "logout":
+					$helpInfo = array(
+						"Syntax: LOGOUT",
+						" ",
+						"Reverse the effect of the IDENTIFY command."
+					);
+					break;
+					
+				default:
+					$helpInfo = array(
+						"No help available for " . $args[1]
+					);
+					break;
+			}
+			
+			foreach ($helpInfo as $help) {
+				$this->NoticeUser($user, $help);
+			}
 		}
 	}
 	
@@ -254,6 +356,7 @@ class NickServ
 	}
 	
 	public function RespondDrop($user, $args) {
+		// To-do: Drop channels owned by user as well.
 		if (isset($args[1]) && !empty($args[1]) && (strtolower($args[1]) != strtolower($user->Nick()))) {
 			$target = $args[1];
 			if ($user->Operator()) {

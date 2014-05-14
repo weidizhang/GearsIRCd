@@ -164,17 +164,16 @@ class Commands
 	
 	public function RespondUser($user, $line, $args) {
 		if ((count($args) >= 5) && ($user->Nick() != null) && ($user->Ident() == null)) {
+			$ident = $args[1];
+			$realName = ltrim($args[4], ":");
+			$user->Ident($ident);
+			$user->Realname($realName);
+			
 			if (count($this->allUsers) > $this->maxUsers) {
-				$this->SocketHandler->sendRaw($user->Socket(), "ERROR :Closing Link: " . $user->Nick() . "[" . $user->hostName . "] " . $user->Nick() . " (This server is full.)");
+				$this->RespondKill($this->Services->OperServ->AsUser(), "KILL " . $user->Nick() . " :Server is full", array(true, $user->Nick(), true));
 				$this->Services->OperServ->RespondMaxConnections($this->allUsers, $user);
-				socket_close($user->Socket());
 			}
-			else {
-				$ident = $args[1];
-				$realName = ltrim($args[4], ":");
-				$user->Ident($ident);
-				$user->Realname($realName);
-				
+			else {			
 				$createdTS = file_get_contents("createdstamp-ircd");
 				$timeCreated = date("D M d Y", $createdTS) . " at " . date("H:i:s", $createdTS);			
 				
