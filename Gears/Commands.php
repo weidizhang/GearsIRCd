@@ -675,7 +675,7 @@ class Commands
 				
 				if ($chanExists) {
 					if (isset($args[2])) {
-						if ($chanObj->IsHalfOpOrAbove($user)) {
+						if ($chanObj->IsHalfOpOrAbove($user) || ($user->Nick() === "ChanServ" && $user->Operator())) {
 							$curMode = "+";
 							$modes = str_split($args[2]);
 							$modeArgIndex = 2;						
@@ -728,6 +728,11 @@ class Commands
 												$isAlreadyMode = call_user_func(array($chanObj, $modeFunction), $chanUser);
 												if ((!$isAlreadyMode && $curMode == "+") || ($isAlreadyMode && $curMode == "-")) {
 													$userCanSet = call_user_func(array($chanObj, $permissionFunction), $user);
+													
+													if ($user->Nick() === "ChanServ" && $user->Operator()) {
+														$userCanSet = true;
+													}
+													
 													if ($userCanSet) {
 														call_user_func(array($chanObj, $modeFunction), $chanUser, true);
 														if (($changeModes == "") || ($lastMode != $curMode)) {
@@ -978,7 +983,12 @@ class Commands
 				"os" => "OperServ"
 			));
 			$line = "PRIVMSG " . $service . " :" . $msg;
-			$this->Services->$service->HandleCommand($user, $line, $msg);
+			if ($service == "ChanServ") {
+				$this->Services->ChanServ->HandleCommand($user, $line, $msg, $this->allChannels);
+			}
+			else {
+				$this->Services->$service->HandleCommand($user, $line, $msg);
+			}
 		}
 	}
 	

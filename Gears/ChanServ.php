@@ -10,12 +10,18 @@ namespace GearsIRCd;
 
 class ChanServ
 {
-	private $SocketHandler;
-	
+	private $SocketHandler;	
 	private $fakeUser;
+	
+	public $Database;
+	public $NickServ;
+	
+	public $modeQueue = array();
 	
 	public function __construct($sh, $servAddr) {
 		$this->SocketHandler = $sh;
+		$this->Database = new \GearsIRCd\Database("./Database/ChanServ.db");
+		$this->Database->Query("CREATE TABLE IF NOT EXISTS Channels (Channel TEXT COLLATE NOCASE, Founder TEXT COLLATE NOCASE, Password TEXT, AccessList TEXT, TimeCreated INTEGER);");
 		
 		$this->fakeUser = new \GearsIRCd\User(false, -1, "127.0.0.1", "localhost");
 		$this->fakeUser->Operator(true);
@@ -25,7 +31,7 @@ class ChanServ
 		$this->fakeUser->Realname("IRCd Service");
 	}
 	
-	public function HandleCommand($user, $line, $msg) {
+	public function HandleCommand($user, $line, $msg, $allChannels) {
 		$msgArgs = explode(" ", $msg);
 		$cmdRecv = strtolower($msgArgs[0]);
 		
@@ -34,6 +40,10 @@ class ChanServ
 				$this->RespondHelp($user, $msgArgs);
 				break;
 				
+			case "register":
+				$this->RespondRegister($user, $msgArgs, $allChannels);
+				break;
+			
 			default:
 				$this->RespondUnknownCmd($user, $msgArgs);
 				break;
@@ -87,12 +97,86 @@ class ChanServ
 		}
 	}
 	
+	public function RespondRegister($user, $args, $allChannels) {
+		if (isset($args[2])) {
+			$channel = $args[1];
+			$password = $args[2];
+			
+			if ($this->NickServ->IsRegistered($user)) {
+				if ($user->isLoggedIn !== true) {
+					$this->NoticeUser($user, "Password authentication required for that command.");
+					$this->NoticeUser($user, "Retry after typing /msg NickServ IDENTIFY password.");
+				}
+				elseif (substr($channel, 0, 1) != "#") {
+					$this->NoticeUser($user, "Please use the symbol of # when attempting to register.");
+				}
+				elseif ((strlen($password) < 5) || (strpos($password, "\t") !== false) || (strtolower($password) === strtolower($user->Nick()))) {
+					$this->NoticeUser($user, "Please try again with a more obscure password. Passwords should be at least five characters long, should not be something easily guessed (e.g. your nick), and cannot contain the space or tab characters.");
+				}
+				elseif ($this->IsRegistered($channel)) {
+					$this->NoticeUser($user, "Channel " . $channel . " is already registered!");
+				}
+				else {
+					$chanObj = $this->StringToChannelObject($channel, $allChannels);
+					if ($chanObj !== false) {
+						if ($chanObj->IsOpOrAbove($user)) {
+							$accessList = array();
+							$registerQuery = $this->Database->Query("INSERT INTO `Channels` VALUES (:chan, :founder, :pass, :acclist, :time);", array(
+								":chan" => $channel,
+								":founder" => $user->Nick(),
+								":pass" => sha1($password),
+								":acclist" => serialize($accessList),
+								":time" => time()
+							));
+							
+							if ($registerQuery) {
+								$this->NoticeUser($user, "Channel " . $channel . " registered under your account: " . $user->Nick());
+								
+								$this->modeQueue[] = "MODE " . $channel . " +qo " . $user->Nick() . " " . $user->Nick();
+							}
+							else {
+								$this->NoticeUser($user, "An error occurred. Please contact an IRC operator for help.");
+							}
+						}
+						else {
+							$this->NoticeUser($user, "You must be a channel operator to register the channel.");
+						}
+					}
+					else {
+						$this->NoticeUser($user, "Channel " . $channel . " doesn't exist.");
+					}
+				}
+			}
+			else {
+				$this->NoticeUser($user, "You must register your nickname first. Type /msg NickServ HELP for information on registering nicknames.");
+			}
+		}
+		else {
+			$this->NoticeUser($user, "Syntax: REGISTER channel password");
+			$this->NoticeUser($user, "/msg ChanServ HELP REGISTER for more information.");
+		}
+	}
+	
 	public function RespondUnknownCmd($user, $args) {
 		$this->NoticeUser($user, "Unknown command " . $args[0] . ". \"/msg ChanServ HELP\" for help.");
 	}
 	
+	public function IsRegistered($chan) {
+		$checkExisting = $this->Database->QueryAndFetch("SELECT * FROM `Channels` WHERE `Channel`=:chan;", array(":chan" => $chan));
+		return (count($checkExisting) > 0);
+	}
+	
 	public function AsUser() {
 		return $this->fakeUser;
+	}
+	
+	private function StringToChannelObject($chan, $chanArr) {
+		foreach ($chanArr as $chanObj) {
+			if (strtolower($chanObj->Name()) === strtolower($chan)) {
+				return $chanObj;
+			}
+		}
+		return false;
 	}
 	
 }

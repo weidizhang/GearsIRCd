@@ -14,6 +14,7 @@ class NickServ
 	private $fakeUser;
 	
 	public $Database;
+	public $ChanServ;
 	
 	public $unidentifiedUsers = array();
 	public $ghostQueue = array();

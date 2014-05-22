@@ -18,6 +18,9 @@ class Services
 		$this->OperServ = new \GearsIRCd\OperServ($sh, $servicesAddr);
 		$this->ChanServ = new \GearsIRCd\ChanServ($sh, $servicesAddr);
 		$this->NickServ = new \GearsIRCd\NickServ($sh, $servicesAddr);
+		
+		$this->ChanServ->NickServ = $this->NickServ;
+		$this->NickServ->ChanServ = $this->ChanServ;
 	}
 }
 ?>

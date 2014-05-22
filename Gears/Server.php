@@ -117,9 +117,11 @@ class Server extends Commands
 	private function runServices() {
 		foreach ($this->Services->NickServ->unidentifiedUsers as $userIndex => $uUser) {
 			if ((time() - $uUser[1]) >= 60) {
-				$newNick = $this->guestPrefix . rand(100, 99999);
-				$this->Services->NickServ->NoticeUser($uUser[0], "Your nickname is now being changed to " . $newNick);
-				$this->RespondNick($uUser[0], null, array("NICK", ":" . $newNick));
+				if ($uUser[0]->isLoggedIn !== true) {
+					$newNick = $this->guestPrefix . rand(100, 99999);
+					$this->Services->NickServ->NoticeUser($uUser[0], "Your nickname is now being changed to " . $newNick);
+					$this->RespondNick($uUser[0], null, array("NICK", ":" . $newNick));
+				}
 				unset($this->Services->NickServ->unidentifiedUsers[$userIndex]);
 				break;
 			}
@@ -158,6 +160,11 @@ class Server extends Commands
 				$this->Services->NickServ->NoticeUser($gUser[0], "Nick " . $gUser[1] . " isn't currently in use.");
 			}			
 			unset($this->Services->NickServ->ghostQueue[$userIndex]);
+		}
+		
+		foreach ($this->Services->ChanServ->modeQueue as $modeIndex => $mode) {
+			$this->RespondMode($this->Services->ChanServ->AsUser(), explode(" ", $mode));
+			unset($this->Services->ChanServ->modeQueue[$modeIndex]);
 		}
 	}
 }
